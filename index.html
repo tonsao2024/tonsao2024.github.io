@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบฟอร์มปลอดภัย</title>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; padding: 20px; max-width: 400px; margin: auto; background-color: #f4f4f9;}
+    input, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc;}
+    button { background-color: #4CAF50; color: white; border: none; cursor: pointer; font-size: 16px; font-weight: bold;}
+    button.load-btn { background-color: #2196F3; }
+    button.logout-btn { background-color: #f44336; margin-top: 20px;}
+    .box { background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+    #status { font-weight: bold; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <div id="loginSection" class="box">
+    <h2 style="text-align: center;">ล็อกอินเข้าสู่ระบบ</h2>
+    <label>อีเมล:</label>
+    <input type="email" id="loginEmail" placeholder="admin@example.com">
+    <label>รหัสผ่าน:</label>
+    <input type="password" id="loginPassword" placeholder="******">
+    <button onclick="login()">🔑 เข้าสู่ระบบ</button>
+    <p id="loginStatus" style="color: red; text-align: center; font-size: 14px;"></p>
+  </div>
+
+  <div id="appSection" style="display: none;">
+    <h2>แบบฟอร์มบันทึกข้อมูล</h2>
+
+    <div class="box">
+      <label><b>ดึงข้อมูลมาแก้ไข</b> (ใส่ ID ข้อมูล)</label>
+      <input type="text" id="recordId" placeholder="เช่น 17090000 (เว้นว่างเพื่อสร้างใหม่)">
+      <button class="load-btn" onclick="loadData()">🔍 ดึงข้อมูล</button>
+    </div>
+
+    <div class="box">
+      <label>ชื่อ-นามสกุล:</label>
+      <input type="text" id="name" required>
+      <label>อีเมล:</label>
+      <input type="email" id="email" required>
+      <button onclick="saveData()">💾 บันทึกข้อมูล</button>
+    </div>
+
+    <p id="status"></p>
+    <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
+  </div>
+
+  <script type="module">
+    // โหลด Library เพิ่ม (Auth)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+    // 🔴 1. วาง firebaseConfig ของคุณตรงนี้ 🔴
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // เชื่อมต่อ Firebase และ Auth
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    const loginSection = document.getElementById("loginSection");
+    const appSection = document.getElementById("appSection");
+    const statusEl = document.getElementById("status");
+
+    // ตรวจสอบสถานะว่า Login อยู่หรือไม่
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // ล็อกอินแล้ว -> ซ่อนหน้า Login แสดงหน้า Form
+        loginSection.style.display = "none";
+        appSection.style.display = "block";
+      } else {
+        // ยังไม่ล็อกอิน -> แสดงหน้า Login ซ่อนหน้า Form
+        loginSection.style.display = "block";
+        appSection.style.display = "none";
+      }
+    });
+
+    // ฟังก์ชันเข้าสู่ระบบ
+    window.login = async function() {
+      const email = document.getElementById("loginEmail").value;
+      const pass = document.getElementById("loginPassword").value;
+      const loginStatus = document.getElementById("loginStatus");
+      
+      loginStatus.innerText = "กำลังตรวจสอบ...";
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        loginStatus.innerText = "";
+      } catch (error) {
+        loginStatus.innerText = "❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+      }
+    };
+
+    // ฟังก์ชันออกจากระบบ
+    window.logout = function() {
+      signOut(auth);
+      document.getElementById("status").innerText = "";
+    };
+
+    // ฟังก์ชันบันทึกข้อมูล
+    window.saveData = async function() {
+      statusEl.innerText = "⏳ กำลังบันทึก...";
+      statusEl.style.color = "orange";
+      let id = document.getElementById("recordId").value || new Date().getTime().toString(); 
+      document.getElementById("recordId").value = id;
+
+      try {
+        await set(ref(db, 'users/' + id), {
+          name: document.getElementById("name").value,
+          email: document.getElementById("email").value,
+          lastUpdate: new Date().toLocaleString("th-TH")
+        });
+        statusEl.innerText = "✅ บันทึกสำเร็จ! (ID: " + id + ")";
+        statusEl.style.color = "green";
+      } catch (error) {
+        statusEl.innerText = "❌ พลาด: " + error.message;
+      }
+    };
+
+    // ฟังก์ชันดึงข้อมูล
+    window.loadData = async function() {
+      const id = document.getElementById("recordId").value;
+      if (!id) return alert("กรุณาใส่ ID");
+
+      statusEl.innerText = "⏳ กำลังดึงข้อมูล...";
+      try {
+        const snapshot = await get(child(ref(db), `users/${id}`));
+        if (snapshot.exists()) {
+          document.getElementById("name").value = snapshot.val().name;
+          document.getElementById("email").value = snapshot.val().email;
+          statusEl.innerText = "✅ ดึงข้อมูลสำเร็จ!";
+          statusEl.style.color = "blue";
+        } else {
+          statusEl.innerText = "❌ ไม่พบข้อมูล ID นี้";
+        }
+      } catch (error) {
+        statusEl.innerText = "❌ พลาด: " + error.message;
+      }
+    };
+  </script>
+</body>
+</html>
