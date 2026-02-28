@@ -1,152 +1,1454 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบฟอร์มปลอดภัย</title>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- SweetAlert2 สำหรับ Popup แจ้งเตือนแบบทันสมัย -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- SheetJS สำหรับ Export Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
   <style>
-    body { font-family: 'Sarabun', sans-serif; padding: 20px; max-width: 400px; margin: auto; background-color: #f4f4f9;}
-    input, button { width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc;}
-    button { background-color: #4CAF50; color: white; border: none; cursor: pointer; font-size: 16px; font-weight: bold;}
-    button.load-btn { background-color: #2196F3; }
-    button.logout-btn { background-color: #f44336; margin-top: 20px;}
-    .box { background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
-    #status { font-weight: bold; text-align: center; }
+    /* =======================================================
+       Theme Variables (Light & Dark Mode)
+       ======================================================= */
+    :root {
+      font-size: 16px; 
+      --primary: #973122;         
+      --primary-hover: #7a271b;
+      --secondary: #64748b;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #0ea5e9;
+      --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05); 
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+      --radius-md: 0.75rem; 
+      --radius-lg: 1rem;
+      
+      --bg-body: #f8fafc; 
+      --bg-surface: #ffffff; 
+      --border-light: #e2e8f0; 
+      --text-dark: #0f172a; 
+      --text-muted: #64748b;
+      --nav-bg: rgba(255, 255, 255, 0.95);
+      --nav-text: #334155;
+      --input-bg: #f1f5f9;
+      --table-hover: #f1f5f9;
+      --card-bg-subtle: #ffffff;
+      --locked-bg: #e2e8f0;
+      --locked-text: #94a3b8;
+    }
+
+    [data-theme="dark"] {
+      --bg-body: #0f172a; 
+      --bg-surface: #1e293b; 
+      --border-light: #334155; 
+      --text-dark: #f8fafc; 
+      --text-muted: #cbd5e1;
+      --nav-bg: rgba(15, 23, 42, 0.95);
+      --nav-text: #f8fafc;
+      --input-bg: #0b1120;
+      --table-hover: #334155;
+      --card-bg-subtle: #1e293b;
+      --locked-bg: #111827;
+      --locked-text: #475569;
+    }
+
+    body { background-color: var(--bg-body); font-family: 'Kanit', sans-serif; color: var(--text-dark); transition: background-color 0.3s, color 0.3s; }
+
+    /* Fix Bootstrap backgrounds in Dark Mode */
+    [data-theme="dark"] .bg-light, [data-theme="dark"] .bg-white { background-color: var(--bg-surface) !important; color: var(--text-dark) !important; }
+    [data-theme="dark"] .text-dark { color: var(--text-dark) !important; }
+    [data-theme="dark"] .card-header.bg-white { background-color: var(--bg-surface) !important; border-bottom: 1px solid var(--border-light); }
+    [data-theme="dark"] .text-muted { color: var(--text-muted) !important; }
+    [data-theme="dark"] .border-primary { border-color: var(--border-light) !important; }
+
+    .page-content { display: none; opacity: 0; transition: opacity 0.3s ease; }
+    .active-page { display: block; opacity: 1; animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Login Overlay */
+    #loginOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-body); z-index: 999999; display: flex; justify-content: center; align-items: center; }
+
+    /* Navbar & Clock */
+    .navbar { background: var(--nav-bg) !important; backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-light); box-shadow: var(--shadow-sm); padding: 0.5rem 0; transition: background 0.3s; }
+    .navbar-brand { font-weight: 700; color: var(--primary) !important; font-size: 1.3rem; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .navbar-brand img { height: 45px; object-fit: contain; }
+    .nav-link { font-weight: 500; color: var(--nav-text) !important; padding: 0.5rem 1rem !important; border-radius: 50px; transition: all 0.2s; margin: 0 0.2rem; cursor: pointer;}
+    .nav-link:hover, .nav-link.active { background: var(--border-light); color: var(--primary) !important; }
+    
+    .live-clock { font-size: 0.95rem; font-weight: 600; color: var(--primary); background: transparent; border: none; padding: 0.4rem 1rem; letter-spacing: 0.5px; }
+    [data-theme="dark"] .live-clock { color: #f8fafc; }
+
+    .theme-toggle { cursor: pointer; padding: 0.4rem; border-radius: 50%; background: var(--bg-surface); border: 1px solid var(--border-light); color: var(--text-dark); transition: 0.3s; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; font-size: 1.2rem; box-shadow: var(--shadow-sm); }
+    
+    /* Zoom & Scroll Controls */
+    .zoom-controls { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+    .zoom-btn { width: 45px; height: 45px; border-radius: 50%; background: var(--primary); color: #ffffff !important; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 1.2rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; font-weight: bold;}
+    .zoom-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
+
+    .swal2-container { z-index: 99999 !important; font-family: 'Kanit', sans-serif; }
+
+    /* Cards & Forms */
+    .card { border: 1px solid var(--border-light); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); background: var(--bg-surface); margin-bottom: 1.5rem; transition: background 0.3s, border 0.3s; }
+    .card-header { background: transparent; border-bottom: 1px solid var(--border-light); padding: 1.25rem 1.5rem; }
+    .card-title-ui { font-weight: 600; color: var(--text-dark); font-size: 1.25rem; margin: 0; }
+    .card-body { padding: 1.5rem; }
+
+    label { font-weight: 500; color: var(--secondary); font-size: 0.95rem; margin-bottom: 0.3rem; }
+    .form-control, .form-select { background-color: var(--input-bg); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 0.6rem 1rem; color: var(--text-dark); transition: all 0.2s; }
+    .form-control:focus, .form-select:focus { background-color: var(--bg-surface); border-color: var(--primary); box-shadow: 0 0 0 4px rgba(151, 49, 34, 0.15); color: var(--text-dark); }
+    [data-theme="dark"] .form-select option { background-color: var(--bg-surface); color: var(--text-dark); }
+    [data-theme="dark"] .form-control::placeholder { color: #64748b; }
+    [data-theme="dark"] .modal-content { background-color: var(--bg-surface); color: var(--text-dark); border-color: var(--border-light); }
+    [data-theme="dark"] .modal-header { border-bottom-color: var(--border-light); }
+    [data-theme="dark"] .modal-footer { border-top-color: var(--border-light); }
+
+    .input-group-text { background-color: var(--border-light); color: var(--secondary); border: 1px solid var(--border-light); }
+    [data-theme="dark"] .input-group-text { background-color: var(--border-light); color: var(--text-dark); border-color: var(--border-light); }
+
+    .radio-group-box { background: var(--input-bg); border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 1rem; height: 100%; transition: all 0.2s; }
+    .group-title { font-weight: 600; color: var(--text-dark); font-size: 0.95rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-bottom: 0.8rem; }
+    .form-check { padding: 0.5rem 0.5rem 0.5rem 2rem; border-radius: 6px; transition: background 0.2s; margin-bottom: 2px; }
+    .form-check:hover { background: rgba(151, 49, 34, 0.05); }
+    [data-theme="dark"] .form-check:hover { background: var(--table-hover); }
+    .tablet-radio { transform: scale(1.3); margin-top: 0.3rem; cursor: pointer; accent-color: var(--primary); }
+    .radio-label { font-size: 1rem; cursor: pointer; display: inline-block; width: 100%; color: var(--text-dark); }
+    
+    .btn { border-radius: var(--radius-md); font-weight: 500; padding: 0.6rem 1.2rem; transition: all 0.2s; border: none; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(151, 49, 34, 0.3); color: white;}
+    .btn-outline-primary { border: 2px solid var(--primary); color: var(--primary); background: transparent; }
+    .btn-outline-primary:hover { background: var(--primary); color: white; }
+    .btn-outline-secondary { border: 1px solid var(--border-light); color: var(--text-dark); background: var(--bg-surface); }
+    .btn-outline-secondary:hover { background: var(--border-light); color: var(--text-dark); }
+    .btn-outline-danger { border: 1px solid var(--danger); color: var(--danger); background: transparent; }
+    .btn-outline-danger:hover { background: var(--danger); color: white; }
+    
+    .group-cat-box { border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; background: var(--card-bg-subtle); box-shadow: var(--shadow-sm); }
+    .observation-item { border: 1px solid var(--border-light); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem; background: var(--bg-surface); }
+    .obs-title { font-size: 1.05rem; font-weight: 600; color: var(--primary); margin-bottom: 0.8rem; }
+    
+    .sig-preview { border: 2px dashed var(--border-light); border-radius: var(--radius-md); background: var(--input-bg); height: 80px; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; }
+    .sig-preview img { max-height: 100%; max-width: 100%; object-fit: contain; }
+    .modal-canvas-wrap { border: 2px solid var(--primary); border-radius: 8px; background: #fff; touch-action: none; position: relative; }
+
+    /* Tables */
+    .table-responsive { background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); padding: 0 1rem; overflow-x: auto;}
+    .table { margin-bottom: 0; width: 100%; color: var(--text-dark); }
+    .table th { background-color: var(--bg-surface) !important; color: var(--secondary); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 2px solid var(--border-light); }
+    .table td { background: var(--bg-surface); border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light); padding: 1rem 0.5rem; vertical-align: middle; white-space: nowrap; color: var(--text-dark); transition: all 0.3s;}
+    .table tbody tr:hover td { background-color: var(--table-hover); }
+    
+    /* สไตล์แถวที่ถูกล็อค (สีเทาทั้งแถบ และปุ่มกดไม่ได้) */
+    .row-locked td { background-color: var(--locked-bg) !important; color: var(--locked-text) !important; opacity: 0.8; }
+    .row-locked .action-btn-edit, .row-locked .action-btn-del { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; filter: grayscale(100%); }
+    
+    .action-btn { padding: 0.3rem 0.6rem; font-size: 1rem; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
+
+    /* KPI Cards (Dashboard) */
+    .kpi-card { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 1.5rem; border: 1px solid var(--border-light); border-left: 5px solid var(--primary); box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: 0.3s; }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .kpi-title { font-size: 0.85rem; color: var(--secondary); font-weight: 600; text-transform: uppercase; margin-bottom: 0.5rem; z-index: 1; position: relative;}
+    .kpi-value { font-size: 2.2rem; font-weight: 700; color: var(--text-dark); line-height: 1; z-index: 1; position: relative;}
+    .kpi-icon { position: absolute; right: -10px; bottom: -10px; font-size: 4rem; opacity: 0.1; z-index: 0; }
+    
+    .dash-obs-table th { background-color: var(--primary); color: white; padding: 12px 10px; font-size: 0.95rem; border: 1px solid var(--border-light); white-space: nowrap; cursor: pointer; user-select: none;}
+    .dash-obs-table th:hover { background-color: var(--primary-hover); }
+    .dash-obs-table td { padding: 12px 10px; font-size: 0.95rem; border: 1px solid var(--border-light); background: var(--bg-surface); color: var(--text-dark); white-space: normal; word-wrap: break-word;}
+
+    .chart-filter-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--warning); color: white; padding: 0.3rem 0.8rem; border-radius: 50px; font-size: 0.85rem; font-weight: bold; margin-bottom: 1rem;}
+    .chart-filter-clear { cursor: pointer; font-weight: bold; }
+
+    /* =======================================================
+       Print CSS (Strictly Sarabun 10pt & Forces Light Mode)
+       ======================================================= */
+    .paper-a4 { background: white; width: 210mm; margin: 20px auto; padding: 15mm 20mm; box-shadow: 0 0 20px rgba(0,0,0,0.1); border-radius: 4px; color: #000; font-family: 'Sarabun', sans-serif !important; font-size: 10pt !important; line-height: 1.35; }
+    .print-only { display: none; }
+    
+    @media print {
+      :root { --bg-body: #fff; --bg-surface: #fff; --text-dark: #000; --border-light: #000; --primary: #000; --input-bg: #fff; }
+      body { background: white; margin: 0; padding: 0; color: #000; }
+      .navbar, .btn, .no-print, .card, .theme-toggle, .zoom-controls, footer, #loginOverlay { display: none !important; }
+      .page-content { display: block !important; }
+      #page1, #page2, #page3 { display: none !important; } 
+      #page4 { display: block !important; margin: 0; padding: 0; }
+      .paper-a4 { box-shadow: none; border: none; width: 100%; margin: 0; padding: 0; color: #000;}
+      .paper-a4 * { font-family: 'Sarabun', sans-serif !important; font-size: 10pt; color: #000 !important; }
+      .print-only { display: block !important; }
+      .page-break { page-break-before: always; padding-top: 10px; }
+      @page { size: A4; margin: 15mm 12mm; }
+    }
+
+    .p-font { font-family: 'Sarabun', sans-serif !important; }
+    .p-title-box { display: flex; justify-content: space-between; border: 1px solid #000; padding: 4px 8px; background: #e9ecef !important; font-weight: bold; font-size: 11pt; margin-bottom: 10px; align-items: center;}
+    .p-head-text { text-align: center; font-weight: bold; font-size: 12pt; line-height: 1.3; margin-bottom: 10px; }
+    .p-obj-box { font-size: 10pt; margin-bottom: 10px; line-height: 1.4; }
+    .p-line { border-bottom: 1px dotted #000; display: inline-block; text-align: center; color: blue !important; min-height: 16px; }
+    .p-row { display: flex; align-items: baseline; margin-bottom: 4px; }
+    .p-row-grow { flex-grow: 1; }
+    .p-check { font-family: 'Arial Unicode MS', 'Sarabun', sans-serif !important; font-size: 12pt; color: #000; line-height: 1; margin-right: 2px; }
+    .p-section-title { font-weight: bold; background: #e9ecef !important; padding: 2px 10px; border-top: 2px solid #000; border-bottom: 2px solid #000; margin: 10px 0; font-size: 11pt; }
+    .p-sub-title { text-decoration: underline; font-weight: bold; margin-bottom: 4px; margin-top: 8px; }
+    .p-table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 10pt; }
+    .p-table th, .p-table td { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+    .p-table th { text-align: center; background: #f8f9fa !important; font-weight: bold; }
+    .p-sig-box { text-align: center; margin-bottom: 20px; page-break-inside: avoid; }
+    .p-sig-img { width: 160px; height: 50px; margin: 0 auto; display: block; object-fit: contain; }
+    .p-dotted-area { border-bottom: 1px dotted #000; height: 25px; width: 100%; color: blue !important; padding-left: 10px; box-sizing: border-box; }
   </style>
 </head>
 <body>
 
-  <div id="loginSection" class="box">
-    <h2 style="text-align: center;">ล็อกอินเข้าสู่ระบบ</h2>
-    <label>อีเมล:</label>
-    <input type="email" id="loginEmail" placeholder="admin@example.com">
-    <label>รหัสผ่าน:</label>
-    <input type="password" id="loginPassword" placeholder="******">
-    <button onclick="login()">🔑 เข้าสู่ระบบ</button>
-    <p id="loginStatus" style="color: red; text-align: center; font-size: 14px;"></p>
+  <!-- Login Overlay -->
+  <div id="loginOverlay">
+    <div class="card shadow-lg p-4" style="width: 100%; max-width: 400px; border: 2px solid var(--primary);">
+        <div class="text-center mb-4">
+            <img src="https://www.audit.go.th/sites/default/files/logoSAO-BW-TH-s.png" alt="Logo" style="height: 60px; object-fit:contain;">
+            <h4 class="fw-bold mt-3 text-primary">ระบบ DOP 5-1.1</h4>
+            <p class="text-muted">กรุณาเข้าสู่ระบบเพื่อใช้งาน</p>
+        </div>
+        <input type="email" id="loginUser" class="form-control mb-3" placeholder="อีเมล (Email)">
+        <input type="password" id="loginPass" class="form-control mb-4" placeholder="รหัสผ่าน (Password)" onkeypress="if(event.key === 'Enter') window.doLogin()">
+        <button class="btn btn-primary w-100 fw-bold py-2" onclick="window.doLogin()">เข้าสู่ระบบ</button>
+    </div>
   </div>
 
-  <div id="appSection" style="display: none;">
-    <h2>แบบฟอร์มบันทึกข้อมูล</h2>
-
-    <div class="box">
-      <label><b>ดึงข้อมูลมาแก้ไข</b> (ใส่ ID ข้อมูล)</label>
-      <input type="text" id="recordId" placeholder="เช่น 17090000 (เว้นว่างเพื่อสร้างใหม่)">
-      <button class="load-btn" onclick="loadData()">🔍 ดึงข้อมูล</button>
-    </div>
-
-    <div class="box">
-      <label>ชื่อ-นามสกุล:</label>
-      <input type="text" id="name" required>
-      <label>อีเมล:</label>
-      <input type="email" id="email" required>
-      <button onclick="saveData()">💾 บันทึกข้อมูล</button>
-    </div>
-
-    <p id="status"></p>
-    <button class="logout-btn" onclick="logout()">🚪 ออกจากระบบ</button>
+  <!-- Zoom & Scroll Controls -->
+  <div class="zoom-controls no-print">
+    <button id="scrollTopBtn" class="zoom-btn" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="เลื่อนไปบนสุด" style="display:none; background: var(--secondary);">⬆️</button>
+    <button class="zoom-btn" onclick="window.zoomIn()" title="ขยาย">➕</button>
+    <button class="zoom-btn" onclick="window.zoomReset()" title="ขนาดปกติ" style="font-size: 1rem;">O</button>
+    <button class="zoom-btn" onclick="window.zoomOut()" title="ย่อ">➖</button>
   </div>
 
+  <!-- Top Navigation -->
+  <nav class="navbar navbar-expand-lg sticky-top no-print">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand" onclick="window.showPage('page1')">
+        <img src="https://www.audit.go.th/sites/default/files/logoSAO-BW-TH-s.png" alt="Logo">
+        ระบบ DOP 5-1.1
+      </a>
+      
+      <div class="d-flex align-items-center gap-2">
+        <div class="live-clock d-none d-md-block" id="liveClock">กำลังโหลดเวลา...</div>
+        
+        <div class="navbar-nav flex-row gap-1 ms-3">
+          <a class="nav-link" onclick="window.showPage('page1')">📊 ฐานข้อมูล</a>
+          <a class="nav-link" onclick="window.showPage('page2')">📈 แดชบอร์ด</a>
+          <a class="nav-link bg-primary text-white fw-bold rounded-pill px-3 ms-2 shadow-sm" onclick="window.resetForm()">+ เพิ่มข้อมูลใหม่</a>
+          <a class="nav-link text-danger fw-bold ms-2" onclick="window.doLogout()"><span style="cursor: pointer;">🚪 ออกจากระบบ</span></a>
+        </div>
+
+        <div class="theme-toggle ms-3 shadow-sm" onclick="window.toggleTheme()" id="themeIcon" title="สลับโหมดหน้าจอ">🌙</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid mt-4 mb-4" style="max-width: 1300px; min-height: 80vh;">
+    
+    <!-- ================= หน้า 1: ฐานข้อมูลรวม ================= -->
+    <div id="page1" class="page-content active-page">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold m-0 text-dark">ตารางฐานข้อมูลโครงการ</h3>
+        <div class="mt-2 mt-md-0 d-flex gap-2">
+          <button class="btn btn-outline-secondary shadow-sm fw-bold" onclick="window.loadTableData()">🔄 รีเฟรชข้อมูล</button>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-4 mb-2"><select id="filterProv" class="form-select border-primary shadow-sm" onchange="window.filterTable()"><option value="">📍 ทุกจังหวัด</option></select></div>
+        <div class="col-md-4 mb-2"><select id="filterDist" class="form-select border-primary shadow-sm" onchange="window.filterTable()"><option value="">📍 ทุกอำเภอ</option></select></div>
+        <div class="col-md-4 mb-2"><select id="filterGov" class="form-select border-primary shadow-sm" onchange="window.filterTable()"><option value="">🏛️ ทุก อปท.</option></select></div>
+      </div>
+
+      <div class="table-responsive py-2 border-0 shadow-none bg-transparent px-0">
+        <table class="table shadow-sm">
+          <thead>
+            <tr>
+              <th onclick="window.sortTable('recordId')">ID <span id="sort_recordId"></span></th>
+              <th onclick="window.sortTable('timestamp')">เวลาบันทึก <span id="sort_timestamp"></span></th>
+              <th onclick="window.sortTable('obsDate')">วันที่ลงพื้นที่ <span id="sort_obsDate"></span></th>
+              <th onclick="window.sortTable('localGov')">อปท. <span id="sort_localGov"></span></th>
+              <th onclick="window.sortTable('district')">อำเภอ <span id="sort_district"></span></th>
+              <th onclick="window.sortTable('province')">จังหวัด <span id="sort_province"></span></th>
+              <th onclick="window.sortTable('elderlyName')">ชื่อผู้สูงอายุ <span id="sort_elderlyName"></span></th>
+              <th class="text-center" style="min-width: 140px;">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="dataTableBody">
+            <tr><td colspan="8" class="text-center py-5 text-muted">กำลังโหลดข้อมูล... ⏳</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ================= หน้า 2: แดชบอร์ด ================= -->
+    <div id="page2" class="page-content">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark m-0">แดชบอร์ดประเมินผลสัมฤทธิ์</h3>
+        <button class="btn btn-outline-secondary shadow-sm fw-bold" onclick="window.loadDashboardData()">🔄 ประมวลผลข้อมูลใหม่</button>
+      </div>
+
+      <!-- Advanced Filters -->
+      <div class="card border-0 shadow-sm mb-4 bg-body">
+        <div class="card-body">
+          <h6 class="fw-bold text-primary mb-3">🔍 กรองข้อมูลพื้นที่ หรือระบุตัวบุคคล</h6>
+          <div class="row g-2">
+            <div class="col-md-3"><select id="dProv" class="form-select border-primary" onchange="window.updateDashFilters('prov')"><option value="">-- ทุกจังหวัด --</option></select></div>
+            <div class="col-md-3"><select id="dDist" class="form-select border-primary" onchange="window.updateDashFilters('dist')"><option value="">-- ทุกอำเภอ --</option></select></div>
+            <div class="col-md-3"><select id="dGov" class="form-select border-primary" onchange="window.updateDashFilters('gov')"><option value="">-- ทุก อปท. --</option></select></div>
+            <div class="col-md-3"><select id="dName" class="form-select border-danger" style="border-width: 2px;" onchange="window.renderDashResult()"><option value="">-- ดูภาพรวมทั้งหมด --</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="dashResult" style="display:none;">
+        
+        <!-- Active Interactive Filter Indicator -->
+        <div id="chartFilterIndicator" style="display:none;">
+            <div class="chart-filter-badge shadow-sm">
+                <span>🎯 กรองข้อมูลตามกราฟ: <span id="chartFilterText"></span></span>
+                <span class="chart-filter-clear ms-2" onclick="window.clearChartFilter()">✖ ล้างตัวกรอง</span>
+            </div>
+        </div>
+
+        <!-- 5 KPI Cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-md">
+             <div class="kpi-card" style="border-left-color: var(--primary);">
+                <div class="kpi-icon">📋</div>
+                <div class="kpi-title" id="txtKpi1">โครงการทั้งหมด (แห่ง)</div>
+                <div class="kpi-value text-primary" id="resTotal">0</div>
+             </div>
+          </div>
+          <div class="col-md">
+             <div class="kpi-card" style="border-left-color: var(--info);">
+                <div class="kpi-icon">🏛️</div>
+                <div class="kpi-title">จำนวน อปท. (แห่ง)</div>
+                <div class="kpi-value text-info" id="resGovCount">0</div>
+             </div>
+          </div>
+          <div class="col-md">
+             <div class="kpi-card" style="border-left-color: var(--success);">
+                <div class="kpi-icon">💰</div>
+                <div class="kpi-title">งบประมาณรวม (บาท)</div>
+                <div class="kpi-value text-success" id="resBudget">0</div>
+             </div>
+          </div>
+          <div class="col-md">
+             <div class="kpi-card" style="border-left-color: var(--warning);">
+                <div class="kpi-icon">👴</div>
+                <div class="kpi-title" id="txtKpiAge">อายุเฉลี่ย (ปี)</div>
+                <div class="kpi-value text-warning" id="resAge">0</div>
+             </div>
+          </div>
+          <div class="col-md">
+             <div class="kpi-card" style="border-left-color: #8b5cf6;">
+                <div class="kpi-icon">⭐</div>
+                <div class="kpi-title">อัตราความเหมาะสม (%)</div>
+                <div class="kpi-value" style="color: #8b5cf6;" id="resAppRate">0%</div>
+             </div>
+          </div>
+        </div>
+
+        <!-- Charts Row 1: Donut & Bar -->
+        <div id="dashCharts" class="row g-4 mb-4">
+          <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+               <div class="card-header bg-white"><h6 class="fw-bold text-dark m-0">สัดส่วนความเหมาะสม (กดเพื่อกรอง)</h6></div>
+               <div class="card-body d-flex justify-content-center align-items-center"><div style="width: 90%;"><canvas id="chApprop"></canvas></div></div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <div class="card h-100 shadow-sm">
+               <div class="card-header bg-white"><h6 class="fw-bold text-dark m-0">เจาะลึกความเหมาะสม (แยกตามหมวด)</h6></div>
+               <div class="card-body"><canvas id="chCatApprop"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row 2: Pivot Table & Condition -->
+        <div class="row g-4 mb-4">
+           <!-- Pivot / Data Table Section -->
+           <div class="col-md-8">
+               <div class="card h-100 shadow-sm border-0">
+                  <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-3">
+                     <h6 class="fw-bold text-primary m-0">📋 ตารางสรุปผลการประเมิน (คลิกหัวตารางเพื่อเรียง)</h6>
+                     <div id="pivotControls" class="d-flex align-items-center gap-2">
+                        <select id="pivotDim" class="form-select form-select-sm d-inline-block w-auto border-primary" onchange="window.renderDashResult()">
+                          <option value="category">แยกตามหมวดหมู่</option>
+                          <option value="localGov">เปรียบเทียบ อปท.</option>
+                          <option value="district">เปรียบเทียบ อำเภอ</option>
+                          <option value="province">เปรียบเทียบ จังหวัด</option>
+                        </select>
+                        <button class="btn btn-sm btn-success fw-bold" onclick="window.exportPivotToExcel()">📥 Excel</button>
+                     </div>
+                  </div>
+                  <div class="card-body p-0">
+                    <div class="table-responsive border-0 shadow-none px-0 mb-0" style="max-height: 400px; overflow-y: auto;">
+                      <table class="dash-obs-table w-100 m-0" id="pivotTableExport">
+                        <thead id="resObsHead" style="position: sticky; top: 0; z-index: 1;"></thead>
+                        <tbody id="resObsTable"></tbody>
+                      </table>
+                    </div>
+                  </div>
+               </div>
+           </div>
+           
+           <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+               <div class="card-header bg-white"><h6 class="fw-bold text-dark m-0">สภาพภายหลังการปรับปรุง</h6></div>
+               <div class="card-body d-flex justify-content-center align-items-center"><div style="width: 90%;"><canvas id="chCond"></canvas></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Show Comments/Remarks when filtered to individual -->
+        <div id="remarksSection" style="display:none;">
+          <h5 class="fw-bold text-warning mb-3">📝 รายละเอียดเพิ่มเติม / หมายเหตุรายบุคคล</h5>
+          <div class="card shadow-sm"><div class="card-body" id="resRemarks"></div></div>
+        </div>
+      </div>
+      
+      <div id="dashEmpty" class="text-center py-5 text-muted"><h5>👈 กรุณาเลือกตัวกรองด้านบนเพื่อเริ่มวิเคราะห์ข้อมูล</h5></div>
+    </div>
+
+    <!-- ================= หน้า 3: ฟอร์มกรอกข้อมูล ================= -->
+    <div id="page3" class="page-content">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <h3 class="fw-bold text-primary m-0" id="formTitle">หน้าเพิ่มแบบฟอร์มใหม่</h3>
+        <div class="d-flex flex-wrap gap-2">
+           <button class="btn btn-outline-info fw-bold shadow-sm" onclick="window.previewPrint()">🖨️ พิมพ์แบบฟอร์ม (ออฟไลน์)</button>
+           <button class="btn btn-outline-success fw-bold shadow-sm" onclick="window.exportSingleExcel()">📥 ส่งออก Excel (ออฟไลน์)</button>
+           <button class="btn btn-outline-primary fw-bold shadow-sm" onclick="window.saveData(false)">💾 บันทึกฐานข้อมูล (ร่าง)</button>
+           <button class="btn btn-primary fw-bold shadow-sm" onclick="window.saveData(true)">🖨️ บันทึก & ออกรายงาน</button>
+        </div>
+      </div>
+      
+      <!-- ส่วนที่ 1 -->
+      <div class="card border-primary">
+        <div class="card-header bg-primary text-white"><h6 class="card-title-ui text-white m-0">📝 ส่วนที่ 1: ข้อมูลทั่วไปและโครงการ</h6></div>
+        <div class="card-body">
+          <div class="row g-3 mb-4">
+            <div class="col-md-2"><label>ID โครงการ</label><input type="text" class="form-control fw-bold text-primary border-primary" id="manualRecordId" placeholder="เว้นว่าง = รัน Auto"></div>
+            <div class="col-md-4"><label>ชื่อ อปท.</label><input type="text" class="form-control" id="localGov"></div>
+            <div class="col-md-3"><label>อำเภอ (อปท.)</label><input type="text" class="form-control" id="govDistrict"></div>
+            <div class="col-md-3"><label>จังหวัด (อปท.)</label><input type="text" class="form-control" id="govProvince"></div>
+            <div class="col-md-6"><label>ผู้สังเกตการณ์</label><input type="text" class="form-control" id="inspector1"></div>
+            <div class="col-md-6"><label>ผู้ร่วมสังเกตการณ์</label><input type="text" class="form-control" id="inspector2"></div>
+            <div class="col-md-4"><label>วันที่สังเกตการณ์</label><input type="date" class="form-control" id="obsDate"></div>
+            <div class="col-md-4"><label>เวลาเริ่ม (น.)</label><input type="time" class="form-control" id="timeStart"></div>
+            <div class="col-md-4"><label>เวลาสิ้นสุด (น.)</label><input type="time" class="form-control" id="timeEnd"></div>
+          </div>
+          
+          <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-4">งบประมาณ</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3"><label>หน่วยงานสนับสนุน</label><select class="form-select" id="supportAgency"><option value="พมจ.">พมจ.</option><option value="ศพส.">ศพส.</option><option value="อื่นๆ">อื่นๆ</option></select></div>
+            <div class="col-md-3"><label>ปีงบประมาณ</label><input type="text" class="form-control" id="budgetYear"></div>
+            <div class="col-md-3"><label>จำนวนเงิน (บาท)</label><input type="number" class="form-control" id="budgetAmount"></div>
+            <div class="col-md-3"><label>ประวัติรับงบ</label><select class="form-select" id="historyCount"><option value="0">ไม่เคยได้รับ</option><option value="1">เคยได้รับมาแล้ว</option></select></div>
+            <div class="col-md-3"><label>จำนวนครั้งที่เคยรับ</label><input type="number" class="form-control" id="historyNum" value="0"></div>
+          </div>
+
+          <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-4">ข้อมูลผู้สูงอายุ</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6"><label>ชื่อ-นามสกุล</label><input type="text" class="form-control" id="elderlyName"></div>
+            <div class="col-md-2"><label>อายุ</label><input type="number" class="form-control" id="age"></div>
+            <div class="col-md-4"><label>เพศ</label><select class="form-select" id="gender"><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div>
+            <div class="col-md-2"><label>บ้านเลขที่</label><input type="text" class="form-control" id="houseNo"></div>
+            <div class="col-md-2"><label>หมู่ที่</label><input type="text" class="form-control" id="moo"></div>
+            <div class="col-md-3"><label>ตำบล</label><input type="text" class="form-control" id="subDistrict"></div>
+            <div class="col-md-3"><label>อำเภอ</label><input type="text" class="form-control" id="district"></div>
+            <div class="col-md-2"><label>จังหวัด</label><input type="text" class="form-control" id="province"></div>
+            <div class="col-md-4"><label>อาศัยอยู่กับ</label><select class="form-select" id="livingStatus"><option value="คนเดียว">คนเดียว</option><option value="คู่ชีวิต">คู่ชีวิต</option><option value="ครอบครัว">ครอบครัว</option></select></div>
+            <div class="col-md-4"><label>ผู้ดูแล</label><select class="form-select" id="caregiver"><option value="มีผู้ดูแล">มีผู้ดูแล</option><option value="ไม่มีผู้ดูแล">ไม่มีผู้ดูแล</option></select></div>
+            <div class="col-md-4"><label>ลักษณะบ้าน</label><select class="form-select" id="houseType"><option value="บ้านเดี่ยวชั้นเดียว">บ้านเดี่ยวชั้นเดียว</option><option value="บ้านเดี่ยวสองชั้น">บ้านเดี่ยวสองชั้น</option><option value="ทาวน์เฮาส์">ทาวน์เฮาส์</option><option value="ตึกแถว">ตึกแถว</option></select></div>
+            <div class="col-md-12"><label>สมาชิกครอบครัว (ระบุจำนวนคน)</label><div class="d-flex gap-2"><input type="number" class="form-control" id="famTotal" placeholder="รวม"><input type="number" class="form-control" id="famChild" placeholder="เด็ก"><input type="number" class="form-control" id="famElder" placeholder="ผู้สูงอายุ"><input type="number" class="form-control" id="famWorker" placeholder="คนทำงาน"></div></div>
+            <div class="col-md-3"><label>รายได้ผู้สูงอายุ</label><input type="number" class="form-control" id="elderlyIncome"></div>
+            <div class="col-md-6"><label>แหล่งรายได้</label><input type="text" class="form-control" id="incomeSource" placeholder="เช่น เบี้ยผู้สูงอายุ, เบี้ยผู้พิการ"></div>
+            <div class="col-md-3"><label>รายได้รวมครอบครัว</label><input type="number" class="form-control" id="totalFamilyIncome"></div>
+            <div class="col-md-12"><label>กรรมสิทธิ์ที่ดิน</label><select class="form-select" id="landOwnership"><option value="เป็นเจ้าของเอง">เป็นเจ้าของเอง</option><option value="อาศัยผู้อื่น/ที่ดินญาติ">อาศัยผู้อื่น/ที่ดินญาติ</option><option value="ไม่มีเอกสารสิทธิ์/ที่สาธารณะ">ไม่มีเอกสารสิทธิ์/ที่สาธารณะ</option></select></div>
+          </div>
+
+          <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 mt-4">การปรับปรุง/ซ่อมแซม</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-12">
+              <label>รายการที่ปรับปรุง (ร้องขอ)</label>
+              <div class="p-2 border rounded" style="background: var(--input-bg);">
+                <div class="form-check form-check-inline"><input class="form-check-input chk-req" type="checkbox" value="พื้นบ้าน / หลังคา / บันได"> <label class="form-check-label text-dark">พื้นบ้าน / หลังคา / บันได</label></div>
+                <div class="form-check form-check-inline"><input class="form-check-input chk-req" type="checkbox" value="ฝาบ้าน / ประตู / หน้าต่าง / ระบบไฟฟ้า (สวิตช์ไฟ / ปลักไฟ / สายไฟ)"> <label class="form-check-label text-dark">ฝาบ้าน/ประตู/หน้าต่าง/ระบบไฟฟ้า</label></div>
+                <div class="form-check form-check-inline"><input class="form-check-input chk-req" type="checkbox" value="ห้องน้ำ"> <label class="form-check-label text-dark">ห้องน้ำ</label></div>
+                <div class="form-check form-check-inline"><input class="form-check-input chk-req" type="checkbox" value="ระเบียง / ชานบ้าน"> <label class="form-check-label text-dark">ระเบียง / ชานบ้าน</label></div>
+                <div class="form-check form-check-inline"><input class="form-check-input chk-req" type="checkbox" value="อื่นๆ"> <label class="form-check-label text-dark">อื่นๆ</label> <input type="text" class="form-control form-control-sm d-inline w-auto ms-2" id="reqOtherText"></div>
+              </div>
+            </div>
+            <div class="col-md-12"><label>รายละเอียดที่ปรับปรุง (ได้รับ)</label><textarea class="form-control" id="receivedItems" rows="2"></textarea></div>
+            <div class="col-md-4"><label>วันที่แล้วเสร็จ</label><input type="date" class="form-control" id="finishDate"></div>
+            <div class="col-md-4"><label>ระยะเวลาหลังปรับปรุง</label><div class="d-flex gap-2"><input type="number" class="form-control" id="durYear" placeholder="ปี"><input type="number" class="form-control" id="durMonth" placeholder="เดือน"></div></div>
+            <div class="col-md-4"><label>หน่วยงานอื่นที่ช่วย</label><input type="text" class="form-control" id="otherAgency" placeholder="ระบุหน่วยงาน (ถ้ามี)"></div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+             <label class="fw-bold text-primary m-0">สภาพก่อนซ่อมแซม (ตาราง 1-6)</label>
+             <button class="btn btn-sm btn-outline-primary fw-bold" onclick="window.addRepairRow()">+ เพิ่มรายการซ่อมแซม</button>
+          </div>
+          <div class="table-responsive border-0 px-0 shadow-none">
+            <table class="table table-bordered mb-0">
+              <thead class="bg-light"><tr><th style="width:30%">รายการที่ได้รับ</th><th style="width:45%">สภาพก่อนการปรับปรุง</th><th style="width:20%">ผู้เสนอ</th><th style="width:5%"></th></tr></thead>
+              <tbody id="repairTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ส่วนที่ 2 -->
+      <div class="card mb-4" style="border-top: 4px solid var(--success);">
+        <div class="card-header"><h6 class="card-title-ui text-success m-0">🔍 ส่วนที่ 2: การสังเกตการณ์สภาพที่อยู่อาศัย <span class="text-danger fs-6">(บังคับประเมินเมื่อจะออกรายงาน)</span></h6></div>
+        <div class="card-body bg-body">
+          <div id="observationContainer"></div>
+          <div class="text-center mt-3"><button class="btn btn-outline-secondary rounded-pill px-4 shadow-sm" style="background:var(--bg-surface)" onclick="window.addOtherItem()">+ เพิ่มรายการอื่นๆ</button></div>
+        </div>
+      </div>
+
+      <!-- ส่วนที่ 3 -->
+      <div class="card mb-4" style="border-top: 4px solid var(--danger);">
+        <div class="card-header"><h6 class="card-title-ui text-danger m-0">✍️ ส่วนที่ 3: ความเห็นและผู้ลงนาม</h6></div>
+        <div class="card-body">
+          <label>ความเห็นของผู้ตรวจสอบ</label>
+          <textarea class="form-control mb-4" id="inspectorSummary" rows="4"></textarea>
+          
+          <div class="row g-4">
+            <div class="col-md-6 border-end p-3">
+              <label class="text-primary fw-bold">1. ผู้สังเกตการณ์</label>
+              <input type="text" class="form-control mb-2" id="s1_name" placeholder="ชื่อ-สกุล">
+              <input type="text" class="form-control mb-2" id="s1_pos" placeholder="ตำแหน่ง">
+              <input type="text" class="form-control mb-2" id="s1_agency" placeholder="หน่วยงาน">
+              <div class="sig-preview shadow-sm" onclick="window.openSigModal('pad1', 'ผู้สังเกตการณ์')">
+                <img id="img_pad1" src="" alt="คลิกเพื่อเซ็นชื่อ" onerror="this.style.display='none'; this.parentNode.innerHTML='<span class=\'text-muted fw-bold\'>✍️ คลิกที่นี่เพื่อเซ็นชื่อ</span><img id=\'img_pad1\' src=\'\' style=\'display:none;\'>'">
+              </div>
+            </div>
+            <div class="col-md-6 p-3">
+              <label class="text-primary fw-bold">2. สตง. (ขวาบน)</label>
+              <input type="text" class="form-control mb-2" id="s2_name" placeholder="ชื่อ-สกุล">
+              <div class="input-group mb-2">
+                 <span class="input-group-text" style="font-size: 0.85rem;">นักวิชาการตรวจเงินแผ่นดิน</span>
+                 <input type="text" class="form-control" id="s2_pos" placeholder="ชำนาญการ/ปฏิบัติการ">
+              </div>
+              <input type="text" class="form-control mb-2" value="สำนักงานการตรวจเงินแผ่นดิน" disabled>
+              <div class="sig-preview shadow-sm" onclick="window.openSigModal('pad2', 'สตง. (ขวาบน)')">
+                <img id="img_pad2" src="" alt="คลิกเพื่อเซ็นชื่อ" onerror="this.style.display='none'; this.parentNode.innerHTML='<span class=\'text-muted fw-bold\'>✍️ คลิกที่นี่เพื่อเซ็นชื่อ</span><img id=\'img_pad2\' src=\'\' style=\'display:none;\'>'">
+              </div>
+            </div>
+            <div class="col-md-6 border-end border-top p-3">
+              <label class="text-primary fw-bold">3. ผู้ร่วมสังเกตการณ์</label>
+              <input type="text" class="form-control mb-2" id="s3_name" placeholder="ชื่อ-สกุล">
+              <input type="text" class="form-control mb-2" id="s3_pos" placeholder="ตำแหน่ง">
+              <input type="text" class="form-control mb-2" id="s3_agency" placeholder="หน่วยงาน">
+              <div class="sig-preview shadow-sm" onclick="window.openSigModal('pad3', 'ผู้ร่วมสังเกตการณ์')">
+                <img id="img_pad3" src="" alt="คลิกเพื่อเซ็นชื่อ" onerror="this.style.display='none'; this.parentNode.innerHTML='<span class=\'text-muted fw-bold\'>✍️ คลิกที่นี่เพื่อเซ็นชื่อ</span><img id=\'img_pad3\' src=\'\' style=\'display:none;\'>'">
+              </div>
+            </div>
+            <div class="col-md-6 border-top p-3">
+              <label class="text-primary fw-bold">4. สตง. (ขวาล่าง)</label>
+              <input type="text" class="form-control mb-2" id="s4_name" placeholder="ชื่อ-สกุล">
+              <div class="input-group mb-2">
+                 <span class="input-group-text" style="font-size: 0.85rem;">นักวิชาการตรวจเงินแผ่นดิน</span>
+                 <input type="text" class="form-control" id="s4_pos" placeholder="ชำนาญการ/ปฏิบัติการ">
+              </div>
+              <input type="text" class="form-control mb-2" value="สำนักงานการตรวจเงินแผ่นดิน" disabled>
+              <div class="sig-preview shadow-sm" onclick="window.openSigModal('pad4', 'สตง. (ขวาล่าง)')">
+                <img id="img_pad4" src="" alt="คลิกเพื่อเซ็นชื่อ" onerror="this.style.display='none'; this.parentNode.innerHTML='<span class=\'text-muted fw-bold\'>✍️ คลิกที่นี่เพื่อเซ็นชื่อ</span><img id=\'img_pad4\' src=\'\' style=\'display:none;\'>'">
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-info fw-bold shadow-sm" onclick="window.previewPrint()">🖨️ พิมพ์แบบฟอร์ม (ออฟไลน์)</button>
+            <button class="btn btn-outline-success fw-bold shadow-sm" onclick="window.exportSingleExcel()">📥 ส่งออก Excel (ออฟไลน์)</button>
+            <button class="btn btn-outline-primary fw-bold shadow-sm" onclick="window.saveData(false)">💾 บันทึกฐานข้อมูล (ร่าง)</button>
+            <button class="btn btn-primary fw-bold shadow-sm" onclick="window.saveData(true)">🖨️ บันทึก & ออกรายงาน</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================= หน้า 4: หน้ากระดาษพิมพ์ ================= -->
+    <div id="page4" class="page-content">
+      <div class="text-center mb-4 no-print bg-white p-4 rounded shadow-sm border border-primary">
+        <p class="text-success fw-bold mb-3 fs-5">เอกสารพร้อมพิมพ์แล้ว (ลายเซ็นถูกฝังในหน้าพิมพ์เรียบร้อย)</p>
+        <button class="btn btn-success px-5 shadow-sm" onclick="window.print()">🖨️ สั่งพิมพ์ / บันทึกเป็น PDF</button>
+        <button class="btn btn-outline-secondary ms-2" onclick="window.showPage('page3')">กลับไปแก้ไข</button>
+      </div>
+
+      <!-- กระดาษแผ่นที่ 1 -->
+      <div class="paper-a4 p-font" id="printSection1">
+        <div class="p-title-box">
+          <div><img src="https://www.audit.go.th/sites/default/files/logoSAO-BW-TH-s.png" style="height: 1.2em; vertical-align: text-bottom; margin-right: 5px;">สำนักงานการตรวจเงินแผ่นดิน</div>
+          <div>แบบ สังเกตการณ์ DOP 5-1.1</div>
+        </div>
+        <div class="p-head-text">แบบสังเกตการณ์บ้านที่ได้รับการปรับปรุงที่พักอาศัยตามโครงการปรับสภาพแวดล้อมฯ<br>การตรวจสอบผลสัมฤทธิ์และประสิทธิภาพการดำเนินงานการเตรียมความพร้อมเพื่อรองรับสังคมสูงวัย<br>กรมกิจการผู้สูงอายุ กระทรวงการพัฒนาสังคมและความมั่นคงของมนุษย์</div>
+        <div class="p-obj-box"><b>วัตถุประสงค์ :</b> เพื่อทราบการดำเนินงานโครงการปรับสภาพแวดล้อมและสิ่งอำนวยความสะดวกของผู้สูงอายุให้เหมาะสมและปลอดภัย ตลอดจนปัญหาอุปสรรคหรือข้อจำกัด<br><b>แหล่งข้อมูล :</b> ผู้สูงอายุที่ได้รับการปรับปรุงที่พักอาศัยที่มีตามโครงการปรับสภาพแวดล้อมและสิ่งอำนวยความสะดวกของผู้สูงอายุ ให้เหมาะสมและปลอดภัยที่สุ่มตรวจสอบ</div>
+
+        <div class="p-row">ชื่อองค์กรปกครองส่วนท้องถิ่น <span class="p-line p-row-grow" id="p_localGov"></span> อำเภอ<span class="p-line" style="width:100px" id="p_gDist"></span>จังหวัด<span class="p-line" style="width:120px" id="p_gProv"></span></div>
+        <div class="p-row">ผู้สังเกตการณ์ <span class="p-line p-row-grow" id="p_insp1"></span></div>
+        <div class="p-row">ผู้ร่วมสังเกตการณ์ <span class="p-line p-row-grow" id="p_insp2"></span></div>
+        <div class="p-row">วันที่สังเกตการณ์ <span class="p-line" style="width:50px" id="p_d"></span> เดือน <span class="p-line" style="width:120px" id="p_m"></span> พ.ศ. <span class="p-line" style="width:60px" id="p_y"></span> เวลา <span class="p-line" style="width:60px" id="p_t1"></span> น. ถึง <span class="p-line" style="width:60px" id="p_t2"></span> น.</div>
+
+        <div class="p-section-title">ส่วนที่ 1 ข้อมูลทั่วไป</div>
+        <div class="p-sub-title">ข้อมูลโครงการและงบประมาณ</div>
+        <div class="p-row">หน่วยงานที่สนับสนุนงบประมาณ <span class="p-check" id="cb_a1">☐</span> พมจ. <span class="p-line" style="width:80px"></span> / <span class="p-check" id="cb_a2">☐</span> ศพส. <span class="p-line" style="width:80px"></span> / <span class="p-check" id="cb_a3">☐</span> อื่นๆ (ระบุ) <span class="p-line" style="width:150px" id="p_agencyText"></span></div>
+        <div class="p-row">ปีงบประมาณที่ได้รับ <span class="p-line" style="width:100px" id="p_year"></span> จำนวนเงินงบประมาณ <span class="p-line p-row-grow" id="p_budget"></span> บาท</div>
+        <div class="p-row">ประวัติการรับงบประมาณ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_h1">☐</span> ไม่เคยได้รับมาก่อน &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_h2">☐</span> เคยได้รับมาแล้ว <span class="p-line" style="width:50px" id="p_hist"></span> ครั้ง</div>
+
+        <div class="p-sub-title">ข้อมูลทั่วไปของผู้สูงอายุ</div>
+        <div class="p-row">ชื่อ-นามสกุล (ผู้สูงอายุ) <span class="p-line p-row-grow" id="p_name"></span></div>
+        <div class="p-row">สถานที่ดำเนินการ (ที่อยู่) บ้านเลขที่<span class="p-line" style="width:50px" id="p_house"></span>หมู่ที่<span class="p-line" style="width:40px" id="p_moo"></span>ตำบล<span class="p-line" style="width:100px" id="p_sub"></span>อำเภอ<span class="p-line" style="width:100px" id="p_dist"></span>จังหวัด<span class="p-line p-row-grow" id="p_prov"></span></div>
+        
+        <div class="p-row mt-1">ข้อมูลผู้สูงอายุ อายุ (ปัจจุบัน) <span class="p-line" style="width:50px" id="p_age"></span> ปี &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; เพศ &nbsp;&nbsp;<span class="p-check" id="cb_m">☐</span> ชาย &nbsp;&nbsp;<span class="p-check" id="cb_f">☐</span> หญิง</div>
+        <div class="p-row mt-1">อาศัยอยู่กับ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_l1">☐</span> คนเดียว &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_l2">☐</span> คู่ชีวิต &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_l3">☐</span> ครอบครัว</div>
+        <div class="p-row mt-1">ผู้ดูแล &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_c1">☐</span> มีผู้ดูแล &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_c2">☐</span> ไม่มีผู้ดูแล</div>
+        <div class="p-row mt-1">ลักษณะบ้าน &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_ht1">☐</span> บ้านเดี่ยวชั้นเดียว <span class="p-check ms-3" id="cb_ht2">☐</span> บ้านเดี่ยวสองชั้น &nbsp;&nbsp;&nbsp; <span class="p-check ms-3" id="cb_ht3">☐</span> ทาวน์เฮาส์ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check ms-3" id="cb_ht4">☐</span> ตึกแถว</div>
+        <div class="p-row mt-1">สมาชิกในครอบครัว <span class="p-line" style="width:40px" id="p_f1"></span> คน แบ่งเป็น เด็ก <span class="p-line" style="width:40px" id="p_f2"></span> คน ผู้สูงอายุ <span class="p-line" style="width:40px" id="p_f3"></span> คน คนทำงาน <span class="p-line" style="width:40px" id="p_f4"></span> คน</div>
+        <div class="p-row mt-1">รายได้ของผู้สูงอายุ <span class="p-line" style="width:80px" id="p_inc1"></span> บาทต่อเดือน แหล่งรายได้ &nbsp; <span class="p-check" id="cb_i1">☐</span> เบี้ยผู้สูงอายุ <span class="p-check ms-2" id="cb_i2">☐</span> เบี้ยผู้พิการ <span class="p-check ms-2" id="cb_i3">☐</span> บัตรสวัสดิการแห่งรัฐ <span class="p-check ms-2" id="cb_i4">☐</span> อื่นๆ <span class="p-line" style="width:100px" id="p_incSrc"></span></div>
+        <div class="p-row mt-1">รายได้รวมของทุกคนในครอบครัว (ถ้ามี) <span class="p-line" style="width:100px" id="p_inc2"></span> บาทต่อเดือน</div>
+        <div class="p-row mt-1">สถานะกรรมสิทธิ์ที่ดินและสิ่งปลูกสร้าง &nbsp;&nbsp; <span class="p-check" id="cb_land1">☐</span> เป็นเจ้าของเอง &nbsp;&nbsp; <span class="p-check" id="cb_land2">☐</span> อาศัยผู้อื่น/ที่ดินญาติ &nbsp;&nbsp; <span class="p-check" id="cb_land3">☐</span> ไม่มีเอกสารสิทธิ์/ที่สาธารณะ</div>
+
+        <div class="p-sub-title">รายการบ้านที่ปรับปรุง (ร้องขอ)</div>
+        <div><span class="p-check" id="cb_rq1">☐</span> พื้นบ้าน / หลังคา / บันได</div>
+        <div><span class="p-check" id="cb_rq2">☐</span> ฝาบ้าน / ประตู / หน้าต่าง / ระบบไฟฟ้า (สวิตช์ไฟ / ปลักไฟ / สายไฟ)</div>
+        <div><span class="p-check" id="cb_rq3">☐</span> ห้องน้ำ</div>
+        <div class="p-row"><span class="p-check" id="cb_rq4">☐</span> ระเบียง / ชานบ้าน &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_rq5">☐</span> อื่นๆ (ระบุ) <span class="p-line" style="width:200px" id="p_reqOther"></span></div>
+
+        <div class="p-sub-title">รายละเอียดการปรับปรุง/ซ่อมแซม (ได้รับ)</div>
+        <div class="p-row">รายการที่มีการปรับปรุง <span class="p-line p-row-grow" id="p_recItems1"></span></div>
+        <div class="p-row"><span class="p-line p-row-grow" id="p_recItems2"></span></div>
+        <div class="p-row mt-1">วันที่ดำเนินการแล้วเสร็จ วันที่ <span class="p-line" style="width:30px" id="p_fD"></span> เดือน <span class="p-line" style="width:80px" id="p_fM"></span> พ.ศ. <span class="p-line" style="width:40px" id="p_fY"></span> ระยะเวลาหลังการปรับปรุง <span class="p-line" style="width:30px" id="p_dy"></span> ปี <span class="p-line" style="width:30px" id="p_dm"></span> เดือน</div>
+        <div class="p-row mt-1">ได้รับความช่วยเหลือจากหน่วยงานอื่น &nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_oa1">☐</span> ไม่มี &nbsp;&nbsp;&nbsp; <span class="p-check" id="cb_oa2">☐</span> มี (ระบุ) <span class="p-line" style="width:150px" id="p_otherAgency"></span></div>
+      </div>
+      
+      <!-- กระดาษแผ่นที่ 2 -->
+      <div class="page-break"></div>
+      <div class="paper-a4 p-font">
+        <div class="text-center mb-2">-2-</div>
+        <div class="p-sub-title mb-2">สภาพก่อนดำเนินการปรับปรุง/ซ่อมแซม</div>
+        <table class="p-table mb-3">
+          <thead><tr><th style="width:30%">รายการที่ได้รับการปรับปรุง</th><th style="width:45%">รายละเอียดสภาพก่อนการปรับปรุง/ความจำเป็น</th><th style="width:25%">ความต้องการ/ผู้เสนอให้ปรับปรุง</th></tr></thead>
+          <tbody id="p_repairTable"></tbody>
+        </table>
+
+        <div class="p-section-title">ส่วนที่ 2 การสังเกตการณ์สภาพที่อยู่อาศัยของผู้สูงอายุ ตามคู่มือการดำเนินโครงการปรับสภาพแวดล้อมและสิ่งอำนวยความสะดวกของผู้สูงอายุให้เหมาะสมและปลอดภัย (ข้อแนะนำเกี่ยวกับที่อยู่อาศัยของผู้สูงอายุ)</div>
+        <table class="p-table">
+          <thead><tr><th style="width:35%">รายละเอียดและข้อแนะนำการออกแบบ/<br>สภาพปัจจุบัน</th><th style="width:15%">ความเหมาะสมของการปรับปรุง</th><th style="width:25%">สภาพภายหลัง<br>การปรับปรุง<br>(การสังเกตการณ์)</th><th style="width:25%">รายละเอียดเพิ่มเติม (ถ้ามี)</th></tr></thead>
+          <tbody id="p_obsTable_p1"></tbody>
+        </table>
+      </div>
+
+      <!-- กระดาษแผ่นที่ 3 -->
+      <div class="page-break"></div>
+      <div class="paper-a4 p-font">
+        <div class="text-center mb-2">-3-</div>
+        <table class="p-table" style="margin-top:0;">
+          <thead><tr><th style="width:35%">รายละเอียดและข้อแนะนำการออกแบบ/<br>สภาพปัจจุบัน</th><th style="width:15%">ความเหมาะสมของการปรับปรุง</th><th style="width:25%">สภาพภายหลัง<br>การปรับปรุง<br>(การสังเกตการณ์)</th><th style="width:25%">รายละเอียดเพิ่มเติม (ถ้ามี)</th></tr></thead>
+          <tbody id="p_obsTable_p2"></tbody>
+        </table>
+      </div>
+
+      <!-- กระดาษแผ่นที่ 4 -->
+      <div class="page-break"></div>
+      <div class="paper-a4 p-font">
+        <div class="text-center mb-2">-4-</div>
+        <table class="p-table" style="margin-top:0;">
+          <thead><tr><th style="width:35%">รายละเอียดและข้อแนะนำการออกแบบ/<br>สภาพปัจจุบัน</th><th style="width:15%">ความเหมาะสมของการปรับปรุง</th><th style="width:25%">สภาพภายหลัง<br>การปรับปรุง<br>(การสังเกตการณ์)</th><th style="width:25%">รายละเอียดเพิ่มเติม (ถ้ามี)</th></tr></thead>
+          <tbody id="p_obsTable_p3"></tbody>
+        </table>
+
+        <div class="mt-2 text-muted" style="font-size: 10pt;">หมายเหตุ : สภาพปัจจุบันในรายการที่ระบุว่า "ไม่มี" หมายถึง ไม่ปรากฏรายการดังกล่าว และไม่ได้รับการปรับปรุง</div>
+
+        <div class="signature-section mt-4">
+          <div class="fw-bold">ความเห็น/ข้อสังเกตของผู้ตรวจสอบ</div>
+          <div class="p-dotted-area" id="p_comment1"></div>
+          <div class="p-dotted-area" id="p_comment2"></div>
+          <div class="p-dotted-area" id="p_comment3"></div>
+          
+          <div class="text-center mt-4 mb-4" style="font-style: italic;">*ขอรับรองว่าข้อความข้างต้นเป็นรายการที่มีอยู่ในวันเวลาที่ทำการตรวจสอบจริง จึงลงลายมือชื่อไว้เป็นหลักฐาน*</div>
+          
+          <div class="row" style="margin-top: 30px;">
+            <div class="col-6 p-sig-box">
+              <img id="img_pad1_out" class="print-only p-sig-img" alt="" />
+              <div class="p-row justify-content-center mt-2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ลงชื่อ <span class="p-line" style="width:180px;"></span></div>
+              <div class="p-row justify-content-center">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (<span class="p-line" style="width:200px;" id="o_n1"></span>)</div>
+              <div class="p-row justify-content-center mt-1">ตำแหน่ง <span class="p-line" style="width:220px;" id="o_p1"></span></div>
+              <div class="p-row justify-content-center mt-1">หน่วยงาน <span class="p-line" style="width:220px;" id="o_a1"></span></div>
+            </div>
+            <div class="col-6 p-sig-box">
+              <img id="img_pad2_out" class="print-only p-sig-img" alt="" />
+              <div class="p-row justify-content-center mt-2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ลงชื่อ <span class="p-line" style="width:180px;"></span></div>
+              <div class="p-row justify-content-center">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (<span class="p-line" style="width:200px;" id="o_n2"></span>)</div>
+              <div class="p-row justify-content-center mt-1">ตำแหน่ง นักวิชาการตรวจเงินแผ่นดิน <span class="p-line" style="width:70px;" id="o_p2"></span></div>
+              <div class="p-row justify-content-center mt-1 text-start" style="padding-left: 30px;">หน่วยงาน สำนักงานการตรวจเงินแผ่นดิน</div>
+            </div>
+          </div>
+          <div class="row" style="margin-top: 20px;">
+            <div class="col-6 p-sig-box">
+              <img id="img_pad3_out" class="print-only p-sig-img" alt="" />
+              <div class="p-row justify-content-center mt-2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ลงชื่อ <span class="p-line" style="width:180px;"></span></div>
+              <div class="p-row justify-content-center">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (<span class="p-line" style="width:200px;" id="o_n3"></span>)</div>
+              <div class="p-row justify-content-center mt-1">ตำแหน่ง <span class="p-line" style="width:220px;" id="o_p3"></span></div>
+              <div class="p-row justify-content-center mt-1">หน่วยงาน <span class="p-line" style="width:220px;" id="o_a3"></span></div>
+            </div>
+            <div class="col-6 p-sig-box">
+              <img id="img_pad4_out" class="print-only p-sig-img" alt="" />
+              <div class="p-row justify-content-center mt-2">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ลงชื่อ <span class="p-line" style="width:180px;"></span></div>
+              <div class="p-row justify-content-center">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (<span class="p-line" style="width:200px;" id="o_n4"></span>)</div>
+              <div class="p-row justify-content-center mt-1">ตำแหน่ง นักวิชาการตรวจเงินแผ่นดิน <span class="p-line" style="width:70px;" id="o_p4"></span></div>
+              <div class="p-row justify-content-center mt-1 text-start" style="padding-left: 30px;">หน่วยงาน สำนักงานการตรวจเงินแผ่นดิน</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="container-fluid no-print">
+       <footer class="text-center py-4 mt-4 border-top text-muted" style="font-size: 0.95rem;">
+         ออกแบบและพัฒนาโดย โชติธนพัฒน์ รัตนทิพย์ (นักวิชาการตรวจเงินแผ่นดินปฏิบัติการ)
+       </footer>
+    </div>
+  </div>
+
+  <!-- Modal สำหรับเซ็นลายเซ็น -->
+  <div class="modal fade" id="sigModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-primary shadow-lg">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title fw-bold" id="sigModalTitle">เซ็นลายเซ็น</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center bg-light">
+          <div class="modal-canvas-wrap shadow-sm">
+            <canvas id="modalCanvas" style="width:100%; height:300px; cursor:crosshair; touch-action: none; background:#fff;"></canvas>
+          </div>
+          <p class="text-danger mt-3 mb-0 fw-bold">ใช้นิ้วหรือเมาส์วาดลายเซ็นในกรอบสีขาวด้านบน</p>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary fw-bold" onclick="window.clearModalSignature()">ล้างลายเซ็น</button>
+          <button type="button" class="btn btn-primary px-4 fw-bold shadow-sm" onclick="window.confirmSignature()">บันทึกลายเซ็น</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase & Core Logic -->
   <script type="module">
-    // โหลด Library เพิ่ม (Auth)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    // นำเข้า Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, setDoc, getDoc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 🔴 1. วาง firebaseConfig ของคุณตรงนี้ 🔴
+    // 🚨 นำ config จาก Firebase Console มาวางแทนที่ตรงนี้ 🚨
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyA5vDY5VUj2q1eQh7YEPSIgnLH-no3pyCk",
+      authDomain: "survaydatsao.firebaseapp.com",
+      databaseURL: "https://survaydatsao-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "survaydatsao",
+      storageBucket: "survaydatsao.firebasestorage.app",
+      messagingSenderId: "818178217120",
+      appId: "1:818178217120:web:adabe4ae99b6ac6bd625c5",
+      measurementId: "G-TCZ44ZDFD9"
     };
 
-    // เชื่อมต่อ Firebase และ Auth
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    const loginSection = document.getElementById("loginSection");
-    const appSection = document.getElementById("appSection");
-    const statusEl = document.getElementById("status");
+    // ตัวแปร Global
+    let globalTableData = []; let globalDashData = []; let isEditMode = false; let filteredTableData = []; let currentSortCol = ''; let currentSortAsc = true;
+    let currentSigTarget = '';
+    let dashCharts = { approp: null, cond: null, catApprop: null };
+    let dashActiveFilter = null; 
+    let repairRowCount = 0;
+    
+    // ==========================================
+    // UI & Utility Functions
+    // ==========================================
+    window.addEventListener('scroll', () => { const topBtn = document.getElementById('scrollTopBtn'); if(window.scrollY > 300) topBtn.style.display = 'flex'; else topBtn.style.display = 'none'; });
+    
+    let currentRem = 16;
+    window.zoomIn = () => { currentRem += 2; document.documentElement.style.fontSize = currentRem + 'px'; }
+    window.zoomOut = () => { currentRem = Math.max(10, currentRem - 2); document.documentElement.style.fontSize = currentRem + 'px'; }
+    window.zoomReset = () => { currentRem = 16; document.documentElement.style.fontSize = currentRem + 'px'; }
 
-    // ตรวจสอบสถานะว่า Login อยู่หรือไม่
+    function showLoader(titleText = 'กำลังโหลดข้อมูล...') {
+      Swal.fire({
+         title: titleText, html: '<div class="mt-3"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div></div>',
+         showConfirmButton: false, allowOutsideClick: false, allowEscapeKey: false,
+         background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#1e293b' : '#ffffff',
+         color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#f8fafc' : '#0f172a'
+      });
+    }
+    function hideLoader() { if (Swal.isVisible()) Swal.close(); }
+    function showToast(title, icon='success') { Swal.fire({ toast: true, position: 'top-end', icon: icon, title: title, showConfirmButton: false, timer: 2500 }); }
+
+    // นาฬิกาแบบสด
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('liveClock').textContent = now.toLocaleDateString('th-TH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' น.';
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    window.toggleTheme = () => {
+      const body = document.documentElement; const icon = document.getElementById('themeIcon');
+      if (body.getAttribute('data-theme') === 'dark') { body.removeAttribute('data-theme'); icon.textContent = '🌙'; } 
+      else { body.setAttribute('data-theme', 'dark'); icon.textContent = '☀️'; }
+    }
+
+    window.showPage = (pageId) => {
+      document.querySelectorAll('.page-content').forEach(el => el.classList.remove('active-page'));
+      document.getElementById(pageId).classList.add('active-page');
+      window.scrollTo(0,0);
+    }
+
+    function formatDateBE(dateStr) {
+      if (!dateStr || dateStr === '-') return '-';
+      const parts = dateStr.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parseInt(parts[0]) + 543}`;
+      return dateStr;
+    }
+    
+    function parseDateToISO(dateStr) {
+      if (!dateStr || dateStr === '-') return '';
+      if (dateStr.includes('-')) {
+          let parts = dateStr.split('-');
+          if(parts[0].length === 4 && parseInt(parts[0]) > 2500) return `${parseInt(parts[0]) - 543}-${parts[1]}-${parts[2]}`;
+          return dateStr;
+      } 
+      const parts = dateStr.split('/');
+      if (parts.length === 3) return `${parseInt(parts[2]) - 543}-${parts[1]}-${parts[0]}`;
+      return '';
+    }
+
+    // ==========================================
+    // Firebase Auth (Login / Logout)
+    // ==========================================
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        // ล็อกอินแล้ว -> ซ่อนหน้า Login แสดงหน้า Form
-        loginSection.style.display = "none";
-        appSection.style.display = "block";
+        document.getElementById('loginOverlay').style.display = 'none';
+        window.showPage('page1'); 
+        window.loadTableData();
       } else {
-        // ยังไม่ล็อกอิน -> แสดงหน้า Login ซ่อนหน้า Form
-        loginSection.style.display = "block";
-        appSection.style.display = "none";
+        document.getElementById('loginOverlay').style.display = 'flex';
       }
     });
 
-    // ฟังก์ชันเข้าสู่ระบบ
-    window.login = async function() {
-      const email = document.getElementById("loginEmail").value;
-      const pass = document.getElementById("loginPassword").value;
-      const loginStatus = document.getElementById("loginStatus");
-      
-      loginStatus.innerText = "กำลังตรวจสอบ...";
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        loginStatus.innerText = "";
-      } catch (error) {
-        loginStatus.innerText = "❌ อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-      }
-    };
-
-    // ฟังก์ชันออกจากระบบ
-    window.logout = function() {
-      signOut(auth);
-      document.getElementById("status").innerText = "";
-    };
-
-    // ฟังก์ชันบันทึกข้อมูล
-    window.saveData = async function() {
-      statusEl.innerText = "⏳ กำลังบันทึก...";
-      statusEl.style.color = "orange";
-      let id = document.getElementById("recordId").value || new Date().getTime().toString(); 
-      document.getElementById("recordId").value = id;
-
-      try {
-        await set(ref(db, 'users/' + id), {
-          name: document.getElementById("name").value,
-          email: document.getElementById("email").value,
-          lastUpdate: new Date().toLocaleString("th-TH")
-        });
-        statusEl.innerText = "✅ บันทึกสำเร็จ! (ID: " + id + ")";
-        statusEl.style.color = "green";
-      } catch (error) {
-        statusEl.innerText = "❌ พลาด: " + error.message;
-      }
-    };
-
-    // ฟังก์ชันดึงข้อมูล
-    window.loadData = async function() {
-      const id = document.getElementById("recordId").value;
-      if (!id) return alert("กรุณาใส่ ID");
-
-      statusEl.innerText = "⏳ กำลังดึงข้อมูล...";
-      try {
-        const snapshot = await get(child(ref(db), `users/${id}`));
-        if (snapshot.exists()) {
-          document.getElementById("name").value = snapshot.val().name;
-          document.getElementById("email").value = snapshot.val().email;
-          statusEl.innerText = "✅ ดึงข้อมูลสำเร็จ!";
-          statusEl.style.color = "blue";
-        } else {
-          statusEl.innerText = "❌ ไม่พบข้อมูล ID นี้";
+    window.doLogin = async () => {
+        const email = document.getElementById('loginUser').value;
+        const pass = document.getElementById('loginPass').value;
+        if(!email || !pass) return showToast('กรุณากรอกอีเมลและรหัสผ่าน', 'warning');
+        
+        showLoader('กำลังเข้าสู่ระบบ...');
+        try {
+            await signInWithEmailAndPassword(auth, email, pass);
+            hideLoader();
+            showToast('เข้าสู่ระบบสำเร็จ', 'success');
+        } catch (error) {
+            hideLoader();
+            Swal.fire({icon: 'error', title: 'เข้าสู่ระบบล้มเหลว', text: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'});
         }
-      } catch (error) {
-        statusEl.innerText = "❌ พลาด: " + error.message;
+    }
+
+    window.doLogout = async () => {
+        await signOut(auth);
+        document.getElementById('loginUser').value = '';
+        document.getElementById('loginPass').value = '';
+    }
+
+    // ==========================================
+    // Firebase Database Functions (CRUD)
+    // ==========================================
+    
+    // 1. โหลดข้อมูลตาราง (หน้า 1)
+    window.loadTableData = async (silent = false) => {
+      if(!silent) showLoader('กำลังดึงข้อมูลจาก Firebase...');
+      const tbody = document.getElementById('dataTableBody'); 
+
+      try {
+        const querySnapshot = await getDocs(collection(db, "observations"));
+        let data = [];
+        querySnapshot.forEach((doc) => { data.push({ docId: doc.id, ...doc.data().general, isLocked: doc.data().isLocked }); });
+        
+        if(!silent) hideLoader();
+        globalTableData = data; filteredTableData = [...data];
+        populateTableFilters(); renderTable(filteredTableData);
+      } catch (err) {
+        if(!silent) hideLoader();
+        Swal.fire('เกิดข้อผิดพลาดในการโหลด', err.message, 'error');
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger py-4">พบข้อผิดพลาด: ${err.message}</td></tr>`;
       }
-    };
+    }
+
+    // 2. บันทึกข้อมูล
+    window.saveData = async (doPrint) => {
+      if (doPrint) {
+        let missing = validateObservation();
+        if(missing.length > 0) {
+          Swal.fire({ title: 'กรอกข้อมูลไม่ครบ', html: 'กรุณาประเมินส่วนที่ 2 ให้ครบทุกข้อก่อนออกรายงาน!<br><br>ข้อที่ยังไม่ได้ทำ:<br>' + missing.join("<br>"), icon: 'warning' });
+          return;
+        }
+      }
+
+      showLoader("กำลังบันทึกข้อมูลลง Firebase...");
+      const payload = getFormData();
+
+      try {
+        // จัดการ ID อัตโนมัติ ถ้าเว้นว่างไว้
+        if (!payload.general.recordId) {
+             const snap = await getDocs(collection(db, "observations"));
+             let maxId = 0;
+             snap.forEach(d => {
+                 let idNum = parseInt(d.data().general.recordId);
+                 if(!isNaN(idNum) && idNum > maxId) maxId = idNum;
+             });
+             payload.general.recordId = (maxId + 1).toString();
+        }
+
+        // โครงสร้างข้อมูลที่จะเก็บ
+        const docData = {
+            general: payload.general,
+            observations: payload.observations,
+            signames: payload.signames,
+            signatures: payload.signatures,
+            isLocked: false,
+            updatedAt: new Date().toISOString()
+        };
+
+        // ใช้ recordId เป็นชื่อ Document ใน Firestore
+        await setDoc(doc(db, "observations", payload.general.recordId), docData);
+        
+        hideLoader();
+        if(doPrint) {
+           populatePrintPage(payload.general, payload.signames, payload.observations, payload.signatures);
+           showToast("บันทึกสำเร็จ"); 
+           window.showPage('page4'); 
+        } else {
+           Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 2000 });
+           document.getElementById('manualRecordId').value = payload.general.recordId;
+           document.getElementById('manualRecordId').readOnly = true;
+           isEditMode = true;
+        }
+        window.loadTableData(true); 
+      } catch(err) {
+        hideLoader(); Swal.fire("เกิดข้อผิดพลาดในการบันทึกข้อมูล", err.message, 'error'); 
+      }
+    }
+
+    // 3. ดึงข้อมูลเพื่อแก้ไข
+    window.editRecord = async (docId) => {
+      showLoader('กำลังดึงข้อมูลเพื่อแก้ไข...');
+      document.querySelectorAll('.sig-preview img').forEach(img => { img.src = ''; img.style.display = 'none'; img.parentElement.querySelector('span').style.display = 'inline';});
+
+      try {
+        const docSnap = await getDoc(doc(db, "observations", String(docId)));
+        hideLoader();
+        
+        if (docSnap.exists()) {
+            const record = docSnap.data();
+            window.showPage('page3');
+            isEditMode = true; document.getElementById('formTitle').innerText = `แก้ไขแบบฟอร์ม (ID: #${docId})`;
+            const g = record.general; 
+            document.getElementById('manualRecordId').value = g.recordId; document.getElementById('manualRecordId').readOnly = true;
+            
+            ['localGov','govDistrict','govProvince','inspector1','inspector2','timeStart','timeEnd','supportAgency','budgetYear','budgetAmount','historyCount','elderlyName','age','houseNo','moo','subDistrict','district','province','livingStatus','caregiver','houseType','elderlyIncome','incomeSource','totalFamilyIncome','landOwnership','receivedItems','otherAgency','inspectorSummary'].forEach(key => { if(document.getElementById(key)) document.getElementById(key).value = g[key] || ''; });
+            
+            if(g.obsDate) document.getElementById('obsDate').value = parseDateToISO(g.obsDate);
+            if(g.finishDate) document.getElementById('finishDate').value = parseDateToISO(g.finishDate);
+            if(g.gender) document.querySelector(`select#gender`).value = g.gender;
+            
+            document.getElementById('famTotal').value = g.famTotal || ''; document.getElementById('famChild').value = g.famChild || ''; document.getElementById('famElder').value = g.famElder || ''; document.getElementById('famWorker').value = g.famWorker || ''; 
+            document.getElementById('durYear').value = g.durYear || ''; document.getElementById('durMonth').value = g.durMonth || ''; 
+            
+            document.getElementById('repairTbody').innerHTML = ''; repairRowCount = 0;
+            if(g.repairs && g.repairs.length > 0) { g.repairs.forEach(rep => window.addRepairRow(rep)); } else { for(let i=0; i<6; i++) window.addRepairRow(); }
+
+            if(g.requestItems) { 
+               const reqArr = g.requestItems.split(',').map(s=>s.trim()); 
+               document.querySelectorAll('.chk-req').forEach(chk => { if(reqArr.some(r => r.includes(chk.value))) chk.checked = true; }); 
+               document.getElementById('reqOtherText').value = extractOtherText(g.requestItems); 
+            }
+            
+            const sn = record.signames; 
+            document.getElementById('s1_name').value = (sn && sn.n1) ? sn.n1 : ''; 
+            document.getElementById('s3_name').value = (sn && sn.n3) ? sn.n3 : ''; 
+            document.getElementById('s2_pos').value = g.s2_pos || '';
+            document.getElementById('s4_pos').value = g.s4_pos || '';
+
+            const sigs = record.signatures; 
+            if(sigs) { 
+              const ldImg = (imgId, b64) => { if(b64 && b64.length > 50) { const el = document.getElementById(imgId); el.src = b64; el.style.display = 'block'; el.parentElement.querySelector('span').style.display = 'none'; } }; 
+              ldImg('img_pad1', sigs.sig1); ldImg('img_pad2', sigs.sig2); ldImg('img_pad3', sigs.sig3); ldImg('img_pad4', sigs.sig4); 
+            }
+
+            let html = ''; let currentCat = '';
+            if (record.observations && record.observations.length > 0) {
+              record.observations.forEach(obs => { 
+                  if(obs.category !== currentCat) { if(currentCat !== '') html += `</div>`; html += `<div class="p-3 mb-4 rounded shadow-sm group-cat-box"><h5 class="fw-bold text-success mb-3 pb-2" style="border-bottom: 2px solid var(--success);">${obs.category}</h5>`; currentCat = obs.category; }
+                  html += createObsHtml({ cat: obs.category, sub: obs.subCategory, desc: obs.recommendation, cur: obs.currentState, app: obs.appropriateness, aft: obs.conditionAfter, rem: obs.remark }, obs.category === "5. อื่นๆ"); 
+              });
+              if(currentCat !== '') html += `</div>`;
+            } else { 
+              stdItems.forEach(item => { if(item.cat !== currentCat) { if(currentCat !== '') html += `</div>`; html += `<div class="p-3 mb-4 rounded shadow-sm group-cat-box"><h5 class="fw-bold text-success mb-3 pb-2" style="border-bottom: 2px solid var(--success);">${item.cat}</h5>`; currentCat = item.cat;} html += createObsHtml(item); }); 
+              if(currentCat !== '') html += `</div>`;
+            }
+            document.getElementById('observationContainer').innerHTML = html;
+        } else {
+            Swal.fire('ข้อผิดพลาด', 'ไม่พบข้อมูลในระบบ', 'error');
+        }
+      } catch (err) {
+          hideLoader(); Swal.fire('โหลดข้อมูลผิดพลาด', err.message, 'error');
+      }
+    }
+
+    // 4. ลบข้อมูล
+    window.deleteRecord = (id) => {
+      Swal.fire({
+        title: 'ยืนยันการลบ?', text: `คุณต้องการลบข้อมูล ID: #${id} ใช่หรือไม่?`, icon: 'warning',
+        showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'ลบเลย', cancelButtonText: 'ยกเลิก'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+            showLoader(`กำลังลบข้อมูล ID: #${id}...`);
+            try {
+                await deleteDoc(doc(db, "observations", String(id)));
+                hideLoader(); showToast("ลบข้อมูลสำเร็จ"); window.loadTableData(true); 
+            } catch (err) {
+                hideLoader(); Swal.fire("ลบข้อมูลผิดพลาด", err.message, 'error'); 
+            }
+        }
+      });
+    }
+
+    // 5. ล็อคข้อมูล
+    window.toggleLock = async (id, currentLockStatus) => {
+      const newStatus = !currentLockStatus;
+      const actionText = newStatus ? 'ล็อค' : 'ปลดล็อค';
+      showLoader(`กำลัง${actionText}ข้อมูล...`);
+      try {
+          await updateDoc(doc(db, "observations", String(id)), { isLocked: newStatus });
+          hideLoader(); 
+          Swal.fire({ icon: 'success', title: `${actionText}สำเร็จ`, timer: 2000, showConfirmButton: false });
+          window.loadTableData(true); 
+      } catch(err) {
+          hideLoader(); Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
+      }
+    }
+
+    // ==========================================
+    // UI Helpers (Table, Forms, UI Logic)
+    // ==========================================
+    function populateTableFilters() {
+      const pSet = new Set(), dSet = new Set(), gSet = new Set();
+      globalTableData.forEach(r => { if(r.province) pSet.add(r.province); if(r.district) dSet.add(r.district); if(r.localGov) gSet.add(r.localGov); });
+      const fill = (id, set, def) => { const sel = document.getElementById(id); const cur = sel.value; sel.innerHTML = `<option value="">📍 ${def}</option>`; Array.from(set).sort().forEach(v => sel.innerHTML += `<option value="${v}">${v}</option>`); sel.value = cur; };
+      fill('filterProv', pSet, 'ทุกจังหวัด'); fill('filterDist', dSet, 'ทุกอำเภอ'); fill('filterGov', gSet, 'ทุก อปท.');
+    }
+
+    window.filterTable = () => {
+      const fProv = document.getElementById('filterProv').value; const fDist = document.getElementById('filterDist').value; const fGov = document.getElementById('filterGov').value;
+      filteredTableData = globalTableData.filter(row => (fProv === "" || row.province === fProv) && (fDist === "" || row.district === fDist) && (fGov === "" || row.localGov === fGov));
+      renderTable(filteredTableData);
+    }
+
+    window.sortTable = (col) => {
+      if(currentSortCol === col) { currentSortAsc = !currentSortAsc; } else { currentSortCol = col; currentSortAsc = true; }
+      filteredTableData.sort((a, b) => {
+        let valA = a[col], valB = b[col];
+        if(col === 'recordId') { valA = Number(valA); valB = Number(valB); }
+        else { if(typeof valA === 'string') valA = valA.toLowerCase(); if(typeof valB === 'string') valB = valB.toLowerCase(); }
+        if (valA < valB) return currentSortAsc ? -1 : 1;
+        if (valA > valB) return currentSortAsc ? 1 : -1;
+        return 0;
+      });
+      ['recordId','timestamp','obsDate','localGov','district','province','elderlyName'].forEach(c => {if(document.getElementById('sort_'+c)) document.getElementById('sort_'+c).innerText = ''});
+      if(document.getElementById('sort_'+col)) document.getElementById('sort_'+col).innerText = currentSortAsc ? ' ▲' : ' ▼';
+      renderTable(filteredTableData);
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('dataTableBody'); tbody.innerHTML = '';
+      if(data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูลที่ตรงกับการค้นหา</td></tr>'; return; }
+      data.forEach(row => {
+        const isLocked = row.isLocked;
+        const lockBtn = isLocked ? `<button class="btn action-btn btn-secondary text-white shadow-sm" onclick="window.toggleLock('${row.recordId}', true)" title="ปลดล็อค">🔒</button>` : `<button class="btn action-btn btn-success text-white shadow-sm" onclick="window.toggleLock('${row.recordId}', false)" title="ล็อคข้อมูล">🔓</button>`;
+        const actBtn = isLocked 
+            ? `<button class="btn action-btn btn-secondary text-white action-btn-edit" disabled title="ล็อคอยู่">✏️</button><button class="btn action-btn btn-secondary text-white action-btn-del" disabled title="ล็อคอยู่">🗑️</button>` 
+            : `<button class="btn action-btn btn-warning text-white shadow-sm action-btn-edit" onclick="window.editRecord('${row.recordId}')" title="แก้ไข">✏️</button><button class="btn action-btn btn-danger text-white shadow-sm action-btn-del" onclick="window.deleteRecord('${row.recordId}')" title="ลบ">🗑️</button>`;
+        
+        tbody.innerHTML += `
+          <tr class="${isLocked ? 'row-locked' : ''}">
+            <td class="fw-bold text-primary">#${row.recordId}</td><td>${row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('th-TH') : '-'}</td><td>${row.obsDate || '-'}</td>
+            <td>${row.localGov || '-'}</td><td>${row.district || '-'}</td><td>${row.province || '-'}</td><td>${row.elderlyName || '-'}</td>
+            <td class="text-center"><div class="d-flex justify-content-center gap-1">${lockBtn}${actBtn}</div></td>
+          </tr>`;
+      });
+    }
+
+    window.addRepairRow = (r = {i:'', d:'', p:'-'}) => {
+        if(repairRowCount >= 6) return showToast('เพิ่มได้สูงสุด 6 รายการครับ', 'warning');
+        repairRowCount++;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" class="form-control" value="${r.i}" placeholder="รายการที่ ${repairRowCount}"></td>
+            <td><input type="text" class="form-control" value="${r.d}" placeholder="สภาพก่อนซ่อม..."></td>
+            <td><select class="form-select"><option value="-" ${r.p=='-'?'selected':''}>-</option><option value="ผู้สูงอายุ" ${r.p=='ผู้สูงอายุ'?'selected':''}>ผู้สูงอายุ</option><option value="ช่าง" ${r.p=='ช่าง'?'selected':''}>ช่าง</option><option value="อื่นๆ" ${r.p=='อื่นๆ'?'selected':''}>อื่นๆ</option></select></td>
+            <td class="text-center align-middle"><button class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); repairRowCount--;"><span aria-hidden="true">&times;</span></button></td>
+        `;
+        document.getElementById('repairTbody').appendChild(tr);
+    }
+
+    const stdItems = [
+      { cat: "1. ประตู", sub: "ความกว้าง", desc: "กว้างเป็นพิเศษเพื่อให้รถเข็นผ่านได้สะดวก" }, { cat: "1. ประตู", sub: "ธรณีประตู", desc: "ดีที่สุดคือไม่มี เพื่อป้องกันการสะดุด" },
+      { cat: "2. ห้องน้ำ", sub: "พื้น", desc: "ใช้วัสดุไม่ลื่น" }, { cat: "2. ห้องน้ำ", sub: "ประตู", desc: "กว้าง 86 - 90 ซม. ลูกบิดสูงไม่เกิน 85 ซม." },
+      { cat: "2. ห้องน้ำ", sub: "ราวจับ", desc: "ติดตั้งที่ผนัง สูงจากพื้น 85 ซม." }, { cat: "2. ห้องน้ำ", sub: "สุขภัณฑ์", desc: "ชักโครกนั่งห้อยขา สูงประมาณ 16-19 นิ้ว" },
+      { cat: "3. พื้นบ้าน", sub: "ผิวสัมผัส", desc: "ผิวสัมผัสเรียบ ไม่ลื่น ทำความสะอาดง่าย" }, { cat: "3. พื้นบ้าน", sub: "ระดับ", desc: "ไม่มีขั้นหรือพื้นต่างระดับ" },
+      { cat: "3. พื้นบ้าน", sub: "วัสดุ", desc: "วัสดุไม่ควรเก็บฝุ่นและไม่เย็นเท้า" }, { cat: "4. บันได", sub: "ราวจับ", desc: "มั่นคงทั้งสองด้าน สูง 80 - 90 ซม." },
+      { cat: "4. บันได", sub: "ขนาด", desc: "ลูกนอนกว้างอย่างน้อย 25 ซม. ลูกตั้งไม่เกิน 18 ซม." }, { cat: "4. บันได", sub: "โครงสร้าง", desc: "มีชานพักบันไดตามระยะที่เหมาะสม" }
+    ];
+
+    let itemCounter = 0;
+    function createObsHtml(item, isOther=false) {
+      itemCounter++; const id = itemCounter;
+      const title = isOther ? `<div class="d-flex mb-3"><input type="text" class="form-control w-50 custom-cat text-primary fw-bold" value="${item.sub}" placeholder="ระบุ..."><button class="btn btn-outline-danger ms-auto btn-sm rounded-pill" onclick="this.closest('.observation-item').remove()">ลบข้อนี้</button></div>`
+                            : `<div class="obs-title">${item.sub} <span class="text-muted fw-normal" style="font-size:0.95rem;">(${item.desc})</span></div>`;
+      const checkC = val => item.cur === val ? 'checked' : ''; const checkA = val => item.app === val ? 'checked' : ''; const checkF = val => item.aft === val ? 'checked' : '';
+      return `<div class="observation-item shadow-sm" data-category="${item.cat}" data-sub="${item.sub}" data-rec="${item.desc}">
+          ${title}
+          <div class="row g-3">
+            <div class="col-md-3"><div class="radio-group-box"><div class="group-title">สภาพปัจจุบัน <span class="text-danger">*</span></div><div class="form-check"><input type="radio" class="form-check-input tablet-radio current-state" name="c_${id}" id="c_${id}_1" value="มีจากการปรับปรุง" ${checkC("มีจากการปรับปรุง")}><label for="c_${id}_1" class="radio-label">มีจากการปรับปรุง</label></div><div class="form-check"><input type="radio" class="form-check-input tablet-radio current-state" name="c_${id}" id="c_${id}_2" value="มีอยู่แล้วไม่อยู่ในรายการปรับปรุง" ${checkC("มีอยู่แล้วไม่อยู่ในรายการปรับปรุง")}><label for="c_${id}_2" class="radio-label">มีอยู่แล้วไม่อยู่ในรายการปรับปรุง</label></div><div class="form-check"><input type="radio" class="form-check-input tablet-radio current-state" name="c_${id}" id="c_${id}_3" value="ไม่มี" ${checkC("ไม่มี")}><label for="c_${id}_3" class="radio-label">ไม่มี</label></div></div></div>
+            <div class="col-md-3"><div class="radio-group-box"><div class="group-title">ความเหมาะสม <span class="text-danger">*</span></div><div class="form-check"><input type="radio" class="form-check-input tablet-radio appropriateness" name="a_${id}" id="a_${id}_1" value="เหมาะสม" ${checkA("เหมาะสม")}><label for="a_${id}_1" class="radio-label text-success fw-bold">เหมาะสม</label></div><div class="form-check"><input type="radio" class="form-check-input tablet-radio appropriateness" name="a_${id}" id="a_${id}_2" value="ไม่เหมาะสม" ${checkA("ไม่เหมาะสม")}><label for="a_${id}_2" class="radio-label text-danger fw-bold">ไม่เหมาะสม</label></div></div></div>
+            <div class="col-md-3"><div class="radio-group-box"><div class="group-title">สภาพภายหลัง <span class="text-danger">*</span></div><div class="form-check"><input type="radio" class="form-check-input tablet-radio condition-after" name="f_${id}" id="f_${id}_1" value="สภาพดี ใช้งานได้" ${checkF("สภาพดี ใช้งานได้")}><label for="f_${id}_1" class="radio-label">สภาพดี ใช้งานได้</label></div><div class="form-check"><input type="radio" class="form-check-input tablet-radio condition-after" name="f_${id}" id="f_${id}_2" value="สภาพไม่ดี แต่ยังใช้งานได้" ${checkF("สภาพไม่ดี แต่ยังใช้งานได้")}><label for="f_${id}_2" class="radio-label">ไม่ดี แต่ยังใช้ได้</label></div><div class="form-check"><input type="radio" class="form-check-input tablet-radio condition-after" name="f_${id}" id="f_${id}_3" value="สภาพไม่ดี ไม่สามารถใช้งานได้" ${checkF("สภาพไม่ดี ไม่สามารถใช้งานได้")}><label for="f_${id}_3" class="radio-label text-danger">สภาพไม่ดี ไม่สามารถใช้งานได้</label></div></div></div>
+            <div class="col-md-3"><div class="radio-group-box"><div class="group-title">รายละเอียดเพิ่มเติม (ถ้ามี)</div><textarea class="form-control remark-input border-0 bg-transparent p-0" rows="4" placeholder="พิมพ์รายละเอียด...">${item.rem || ''}</textarea></div></div>
+          </div>
+        </div>`;
+    }
+
+    window.addOtherItem = () => { document.getElementById('observationContainer').insertAdjacentHTML('beforeend', createObsHtml({cat:"5. อื่นๆ", sub:"", desc:"", cur:"", app:"", aft:"", rem:""}, true)); }
+
+    // Modal Signature Logic
+    let modalCtx = null; let modalCanvas = null; let isDrawing = false;
+    function initModalCanvas() {
+      modalCanvas = document.getElementById('modalCanvas');
+      const rect = modalCanvas.parentElement.getBoundingClientRect();
+      modalCanvas.width = rect.width; modalCanvas.height = 300;
+      modalCtx = modalCanvas.getContext('2d');
+      modalCtx.fillStyle = "#ffffff"; modalCtx.fillRect(0, 0, modalCanvas.width, modalCanvas.height);
+      const getPos = (e) => { const r = modalCanvas.getBoundingClientRect(); return { x: ((e.touches ? e.touches[0].clientX : e.clientX) - r.left) * (modalCanvas.width / r.width), y: ((e.touches ? e.touches[0].clientY : e.clientY) - r.top) * (modalCanvas.height / r.height) }; };
+      const startDraw = (e) => { e.preventDefault(); isDrawing = true; modalCtx.beginPath(); const pos = getPos(e); modalCtx.moveTo(pos.x, pos.y); };
+      const endDraw = () => { isDrawing = false; };
+      const draw = (e) => { if(!isDrawing) return; e.preventDefault(); const pos = getPos(e); modalCtx.lineWidth = 3; modalCtx.lineCap = 'round'; modalCtx.strokeStyle = '#000080'; modalCtx.lineTo(pos.x, pos.y); modalCtx.stroke(); };
+      modalCanvas.onmousedown = startDraw; modalCanvas.onmouseup = endDraw; modalCanvas.onmousemove = draw;
+      modalCanvas.ontouchstart = startDraw; modalCanvas.ontouchend = endDraw; modalCanvas.ontouchmove = draw;
+    }
+
+    window.openSigModal = (targetId, titleStr) => {
+      currentSigTarget = targetId; document.getElementById('sigModalTitle').innerText = `เซ็นลายเซ็น: ${titleStr}`;
+      const myModal = new bootstrap.Modal(document.getElementById('sigModal')); myModal.show();
+      setTimeout(initModalCanvas, 250); 
+    }
+    window.clearModalSignature = () => { if(modalCtx && modalCanvas) { modalCtx.fillStyle="#ffffff"; modalCtx.fillRect(0,0,modalCanvas.width,modalCanvas.height); } }
+    window.confirmSignature = () => {
+      if(!modalCanvas) return;
+      const dataUrl = modalCanvas.toDataURL('image/png');
+      const imgTarget = document.getElementById('img_' + currentSigTarget);
+      imgTarget.src = dataUrl; imgTarget.style.display = 'block';
+      imgTarget.parentElement.querySelector('span').style.display = 'none';
+      bootstrap.Modal.getInstance(document.getElementById('sigModal')).hide();
+    }
+
+    window.resetForm = () => {
+      isEditMode = false; document.getElementById('formTitle').innerText = "หน้าเพิ่มแบบฟอร์มใหม่";
+      document.getElementById('manualRecordId').readOnly = false; document.getElementById('manualRecordId').value = "";
+      document.querySelectorAll('input[type="text"]:not(#manualRecordId):not(#filterProv):not(#filterDist):not(#filterGov):not(#s2_pos):not(#s4_pos), input[type="number"], input[type="date"], input[type="time"], textarea').forEach(el => el.value = "");
+      document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(el => el.checked = false);
+      
+      document.getElementById('s2_pos').value = ""; document.getElementById('s4_pos').value = "";
+      document.getElementById('repairTbody').innerHTML = ''; repairRowCount = 0;
+      for(let i=0; i<6; i++) window.addRepairRow();
+
+      let html = ''; let currentCat = '';
+      stdItems.forEach(item => {
+         if (item.cat !== currentCat) { 
+             if(currentCat !== '') html += `</div>`;
+             html += `<div class="p-3 mb-4 rounded shadow-sm group-cat-box"><h5 class="fw-bold text-success mb-3 pb-2" style="border-bottom: 2px solid var(--success);">${item.cat}</h5>`; 
+             currentCat = item.cat; 
+         }
+         html += createObsHtml(item);
+      });
+      if(currentCat !== '') html += `</div>`;
+      document.getElementById('observationContainer').innerHTML = html;
+      document.querySelectorAll('.sig-preview img').forEach(img => { img.src = ''; img.style.display = 'none'; img.parentElement.querySelector('span').style.display = 'inline';});
+      window.showPage('page3');
+    }
+
+    // ==========================================
+    // Data Extraction & Printing
+    // ==========================================
+    function extractOtherText(str) {
+       if(!str || !str.includes('อื่นๆ')) return '';
+       const match = str.match(/\(([^)]+)\)/);
+       if(match) return match[1];
+       return str.split('อื่นๆ').pop().replace(/^[,\s]+/, '').trim();
+    }
+
+    function validateObservation() {
+       let missing = [];
+       document.querySelectorAll('.observation-item').forEach(item => {
+          let id = item.querySelector('.current-state').name.split('_')[1];
+          let cat = item.dataset.category; let sub = item.dataset.sub;
+          if(!document.querySelector(`input[name="c_${id}"]:checked`) || !document.querySelector(`input[name="a_${id}"]:checked`) || !document.querySelector(`input[name="f_${id}"]:checked`)) {
+             missing.push(`- ${cat}: ${sub}`);
+          }
+       });
+       return missing;
+    }
+
+    function getFormData() {
+      let reqArr = []; document.querySelectorAll('.chk-req:checked').forEach(c => { if(c.value!=='อื่นๆ') reqArr.push(c.value); }); 
+      if(document.querySelector('.chk-req[value="อื่นๆ"]').checked) { 
+         let otherText = document.getElementById('reqOtherText').value.trim();
+         if(otherText) reqArr.push(`อื่นๆ (${otherText})`); else reqArr.push('อื่นๆ'); 
+      } 
+      let requestItemsText = reqArr.join(', ');
+
+      const g = {
+        recordId: document.getElementById('manualRecordId').value.trim(), localGov: document.getElementById('localGov').value, govDistrict: document.getElementById('govDistrict').value, govProvince: document.getElementById('govProvince').value, inspector1: document.getElementById('inspector1').value, inspector2: document.getElementById('inspector2').value, 
+        obsDate: formatDateBE(document.getElementById('obsDate').value), timeStart: document.getElementById('timeStart').value, timeEnd: document.getElementById('timeEnd').value,
+        supportAgency: document.getElementById('supportAgency').value, budgetYear: document.getElementById('budgetYear').value, budgetAmount: document.getElementById('budgetAmount').value, historyCount: document.getElementById('historyCount').value, historyNum: document.getElementById('historyNum').value,
+        elderlyName: document.getElementById('elderlyName').value, age: document.getElementById('age').value, gender: document.getElementById('gender').value, houseNo: document.getElementById('houseNo').value, moo: document.getElementById('moo').value, subDistrict: document.getElementById('subDistrict').value, district: document.getElementById('district').value, province: document.getElementById('province').value,
+        livingStatus: document.getElementById('livingStatus').value, caregiver: document.getElementById('caregiver').value, houseType: document.getElementById('houseType').value, famTotal: document.getElementById('famTotal').value, famChild: document.getElementById('famChild').value, famElder: document.getElementById('famElder').value, famWorker: document.getElementById('famWorker').value,
+        elderlyIncome: document.getElementById('elderlyIncome').value, incomeSource: document.getElementById('incomeSource').value, totalFamilyIncome: document.getElementById('totalFamilyIncome').value, landOwnership: document.getElementById('landOwnership').value,
+        requestItems: requestItemsText, receivedItems: document.getElementById('receivedItems').value, 
+        finishDate: formatDateBE(document.getElementById('finishDate').value), durYear: document.getElementById('durYear').value, durMonth: document.getElementById('durMonth').value, otherAgency: document.getElementById('otherAgency').value, inspectorSummary: document.getElementById('inspectorSummary').value, 
+        s2_pos: document.getElementById('s2_pos').value, s4_pos: document.getElementById('s4_pos').value,
+        repairs: []
+      };
+
+      const rTrs = document.getElementById('repairTbody').querySelectorAll('tr');
+      rTrs.forEach(tr => {
+         const iInput = tr.querySelector('td:nth-child(1) input'); const dInput = tr.querySelector('td:nth-child(2) input'); const pSelect = tr.querySelector('td:nth-child(3) select');
+         if(iInput && dInput && pSelect) { const i = iInput.value; const d = dInput.value; const p = pSelect.value; if(i || d) g.repairs.push({i,d,p}); }
+      });
+      
+      const obsData = []; document.querySelectorAll('.observation-item').forEach(item => { const cust = item.querySelector('.custom-cat'); obsData.push({ category: cust ? "5. อื่นๆ" : item.dataset.category, subCategory: cust ? cust.value : item.dataset.sub, recommendation: cust ? cust.value : item.dataset.rec, currentState: item.querySelector('.current-state:checked')?.value || '-', appropriateness: item.querySelector('.appropriateness:checked')?.value || '-', conditionAfter: item.querySelector('.condition-after:checked')?.value || '-', remark: item.querySelector('.remark-input').value }); });
+      const sNames = { n1: document.getElementById('s1_name').value, n2: document.getElementById('s2_name').value, n3: document.getElementById('s3_name').value, n4: document.getElementById('s4_name').value };
+      const getSigImgData = (id) => { const img = document.getElementById('img_'+id); return img && img.src.length > 50 ? img.src : ""; };
+      const sigs = { sig1: getSigImgData('pad1'), sig2: getSigImgData('pad2'), sig3: getSigImgData('pad3'), sig4: getSigImgData('pad4') };
+      
+      return { general: g, observations: obsData, signames: sNames, signatures: sigs };
+    }
+
+    window.previewPrint = () => {
+      const missing = validateObservation();
+      if(missing.length > 0) { Swal.fire({ title: 'ประเมินไม่ครบถ้วน', html: 'กรุณาประเมินส่วนที่ 2 ให้ครบทุกข้อก่อนพิมพ์!<br><br>ข้อที่ยังไม่ได้ทำ:<br>' + missing.join("<br>"), icon: 'warning' }); return; }
+      const data = getFormData();
+      populatePrintPage(data.general, data.signames, data.observations, data.signatures);
+      window.showPage('page4');
+    }
+
+    function populatePrintPage(g, sNames, obsData, sigs) {
+      const setTxt = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text || ''; };
+      const setCb = (id, isChecked) => { const el = document.getElementById(id); if (el) el.innerText = isChecked ? '☑' : '☐'; };
+
+      setTxt('p_localGov', g.localGov); setTxt('p_gDist', g.govDistrict); setTxt('p_gProv', g.govProvince); setTxt('p_insp1', g.inspector1); setTxt('p_insp2', g.inspector2);
+      if(g.obsDate){ const d = new Date(parseDateToISO(g.obsDate)); const m=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"]; setTxt('p_d', d.getDate()); setTxt('p_m', m[d.getMonth()]); setTxt('p_y', d.getFullYear()+543); } else { setTxt('p_d', ''); setTxt('p_m', ''); setTxt('p_y', ''); }
+      setTxt('p_t1', g.timeStart); setTxt('p_t2', g.timeEnd);
+      setCb('cb_a1', g.supportAgency=='พมจ.'); setCb('cb_a2', g.supportAgency=='ศพส.'); setCb('cb_a3', g.supportAgency=='อื่นๆ'); setTxt('p_agencyText', g.supportAgency=='อื่นๆ' ? g.otherAgency : '');
+      setTxt('p_year', g.budgetYear); setTxt('p_budget', g.budgetAmount); setCb('cb_h1', g.historyCount=='0'); setCb('cb_h2', g.historyCount=='1'); setTxt('p_hist', g.historyNum);
+      setTxt('p_name', g.elderlyName); setTxt('p_age', g.age); setCb('cb_m', g.gender=='ชาย'); setCb('cb_f', g.gender=='หญิง');
+      setTxt('p_house', g.houseNo); setTxt('p_moo', g.moo); setTxt('p_sub', g.subDistrict); setTxt('p_dist', g.district); setTxt('p_prov', g.province);
+      setCb('cb_l1', g.livingStatus=='คนเดียว'); setCb('cb_l2', g.livingStatus=='คู่ชีวิต'); setCb('cb_l3', g.livingStatus=='ครอบครัว'); setCb('cb_c1', g.caregiver=='มีผู้ดูแล'); setCb('cb_c2', g.caregiver=='ไม่มีผู้ดูแล');
+      setCb('cb_ht1', g.houseType=='บ้านเดี่ยวชั้นเดียว'); setCb('cb_ht2', g.houseType=='บ้านเดี่ยวสองชั้น'); setCb('cb_ht3', g.houseType=='ทาวน์เฮาส์'); setCb('cb_ht4', g.houseType=='ตึกแถว');
+      setTxt('p_f1', g.famTotal || g.famData?.t); setTxt('p_f2', g.famChild || g.famData?.c); setTxt('p_f3', g.famElder || g.famData?.e); setTxt('p_f4', g.famWorker || g.famData?.w);
+      setTxt('p_inc1', g.elderlyIncome); setTxt('p_inc2', g.totalFamilyIncome);
+      let incS = g.incomeSource || ""; setCb('cb_i1', incS.includes('เบี้ยผู้สูงอายุ')); setCb('cb_i2', incS.includes('เบี้ยผู้พิการ')); setCb('cb_i3', incS.includes('บัตรสวัสดิการ')); setCb('cb_i4', incS.includes('อื่นๆ')); setTxt('p_incSrc', incS);
+      setCb('cb_land1', g.landOwnership=='เป็นเจ้าของเอง'); setCb('cb_land2', g.landOwnership=='อาศัยผู้อื่น/ที่ดินญาติ'); setCb('cb_land3', g.landOwnership=='ไม่มีเอกสารสิทธิ์/ที่สาธารณะ');
+      let reqS = g.requestItems || ""; setCb('cb_rq1', reqS.includes('พื้นบ้าน')); setCb('cb_rq2', reqS.includes('ฝาบ้าน') || reqS.includes('ประตู') || reqS.includes('หน้าต่าง') || reqS.includes('ไฟฟ้า')); setCb('cb_rq3', reqS.includes('ห้องน้ำ')); setCb('cb_rq4', reqS.includes('ระเบียง')); 
+      let reqOtherChecked = !reqS.includes('พื้นบ้าน') && !reqS.includes('ฝาบ้าน') && !reqS.includes('ห้องน้ำ') && !reqS.includes('ระเบียง') && reqS !== "";
+      setCb('cb_rq5', reqOtherChecked || reqS.includes('อื่นๆ')); setTxt('p_reqOther', reqOtherChecked ? reqS : extractOtherText(reqS));
+      const recArr = (g.receivedItems || "").match(/.{1,80}/g) || []; setTxt('p_recItems1', recArr[0]); setTxt('p_recItems2', recArr[1]);
+      if(g.finishDate && g.finishDate !== '-') { const fd = new Date(parseDateToISO(g.finishDate)); setTxt('p_fD', fd.getDate()); setTxt('p_fM', fd.getMonth()+1); setTxt('p_fY', fd.getFullYear()+543); } else { setTxt('p_fD', ''); setTxt('p_fM', ''); setTxt('p_fY', ''); }
+      setTxt('p_dy', g.durYear || g.durData?.y); setTxt('p_dm', g.durMonth || g.durData?.m);
+      setCb('cb_oa1', g.otherAgency == 'ไม่มี' || !g.otherAgency); setCb('cb_oa2', g.otherAgency && g.otherAgency != 'ไม่มี'); setTxt('p_otherAgency', (g.otherAgency && g.otherAgency != 'ไม่มี') ? g.otherAgency : '');
+
+      let pTableHTML = '';
+      for(let i=0; i<6; i++) {
+        const rep = (g.repairs && g.repairs[i]) ? g.repairs[i] : {i:'', d:'', p:''};
+        const c1 = rep.p === 'ผู้สูงอายุ' ? '☑' : '☐'; const c2 = rep.p === 'ช่าง' ? '☑' : '☐'; const c3 = (rep.p !== 'ผู้สูงอายุ' && rep.p !== 'ช่าง' && rep.p !== '-' && rep.p !== '') ? '☑' : '☐';
+        pTableHTML += `<tr><td>${rep.i ? (i+1)+'. '+rep.i : (i+1)+'. '}</td><td style="color:blue;">${rep.d || ''}</td><td><span class="p-check">${c1}</span> ผู้สูงอายุ <span class="p-check ms-2">${c2}</span> ช่าง <span class="p-check ms-2">${c3}</span> อื่นๆ</td></tr>`;
+      }
+      const pRepTable = document.getElementById('p_repairTable'); if(pRepTable) pRepTable.innerHTML = pTableHTML;
+
+      let obsHtml1 = '', obsHtml2 = '', obsHtml3 = '';
+      if(obsData) {
+        obsData.forEach((obs, index) => {
+          const isCheck = (val, target) => val === target ? '☑' : '☐';
+          let titleHtml = `<b>${obs.category}</b><br>${obs.subCategory}: ${obs.recommendation}`;
+          if(obs.category === "1. ประตู" && obs.subCategory === "ธรณีประตู") titleHtml = `<b>1. ประตู</b><br>ธรณีประตู: ดีที่สุดคือไม่มี เพื่อป้องกันการสะดุด<br>หมายเหตุ: หากจำเป็นต้องมีธรณีประตู ไม่ควรสูงเกิน 8 ซม.`;
+          let row = `<tr><td>${titleHtml}<br><div class="mt-1"><span class="p-check">${isCheck(obs.currentState, 'มีจากการปรับปรุง')}</span> มีจากการปรับปรุง</div><div><span class="p-check">${isCheck(obs.currentState, 'มีอยู่แล้วไม่อยู่ในรายการปรับปรุง')}</span> มีอยู่แล้ว/ไม่อยู่ในรายการปรับปรุง</div><div><span class="p-check">${isCheck(obs.currentState, 'ไม่มี')}</span> ไม่มี</div></td><td><div><span class="p-check">${isCheck(obs.appropriateness, 'เหมาะสม')}</span> เหมาะสม</div><div><span class="p-check">${isCheck(obs.appropriateness, 'ไม่เหมาะสม')}</span> ไม่เหมาะสม</div></td><td><div><span class="p-check">${isCheck(obs.conditionAfter, 'สภาพดี ใช้งานได้')}</span> สภาพดี ใช้งานได้</div><div><span class="p-check">${isCheck(obs.conditionAfter, 'สภาพไม่ดี แต่ยังใช้งานได้')}</span> สภาพไม่ดี แต่ยังใช้งานได้</div><div><span class="p-check">${isCheck(obs.conditionAfter, 'สภาพไม่ดี ไม่สามารถใช้งานได้')}</span> สภาพไม่ดี ไม่สามารถใช้งานได้</div></td><td style="color:blue;">${obs.remark !== '-' ? obs.remark : ''}</td></tr>`;
+          if(index < 3) obsHtml1 += row; else if(index >= 3 && index < 12) obsHtml2 += row; else obsHtml3 += row;
+        });
+      }
+      const op1 = document.getElementById('p_obsTable_p1'); if(op1) op1.innerHTML = obsHtml1; const op2 = document.getElementById('p_obsTable_p2'); if(op2) op2.innerHTML = obsHtml2; const op3 = document.getElementById('p_obsTable_p3'); if(op3) op3.innerHTML = obsHtml3;
+
+      const cmts = (g.inspectorSummary || "").match(/.{1,80}/g) || [];
+      setTxt('p_comment1', cmts[0]); setTxt('p_comment2', cmts[1]); setTxt('p_comment3', cmts[2]);
+      
+      setTxt('o_n1', sNames ? sNames.n1 : ''); setTxt('o_p1', document.getElementById('s1_pos') ? document.getElementById('s1_pos').value : ''); setTxt('o_a1', document.getElementById('s1_agency') ? document.getElementById('s1_agency').value : '');
+      setTxt('o_n2', sNames ? sNames.n2 : ''); setTxt('o_p2', g.s2_pos || '');
+      setTxt('o_n3', sNames ? sNames.n3 : ''); setTxt('o_p3', document.getElementById('s3_pos') ? document.getElementById('s3_pos').value : ''); setTxt('o_a3', document.getElementById('s3_agency') ? document.getElementById('s3_agency').value : '');
+      setTxt('o_n4', sNames ? sNames.n4 : ''); setTxt('o_p4', g.s4_pos || '');
+
+      const setSigImg = (imgId, base64) => { const img = document.getElementById(imgId); if(base64 && base64.length > 50) { img.src = base64; img.style.display = 'block'; } else { img.style.display = 'none'; } };
+      setSigImg('img_pad1_out', sigs.sig1); setSigImg('img_pad2_out', sigs.sig2); setSigImg('img_pad3_out', sigs.sig3); setSigImg('img_pad4_out', sigs.sig4);
+    }
+
+    // ==========================================
+    // Dashboard Logic
+    // ==========================================
+    window.loadDashboardData = async () => {
+      showLoader('กำลังวิเคราะห์และประมวลผลข้อมูล...');
+      document.getElementById('dashResult').style.display = 'none'; document.getElementById('dashEmpty').style.display = 'none';
+      try {
+        const querySnapshot = await getDocs(collection(db, "observations"));
+        let data = [];
+        querySnapshot.forEach((doc) => { 
+            let d = doc.data();
+            data.push({ id: d.general.recordId, elderlyName: d.general.elderlyName, localGov: d.general.localGov, district: d.general.district, province: d.general.province, budget: Number(d.general.budgetAmount)||0, age: Number(d.general.age)||0, inspectorSummary: d.general.inspectorSummary, observations: d.observations });
+        });
+        hideLoader(); globalDashData = data; populateDashFiltersInit(); document.getElementById('dashEmpty').style.display = 'block';
+      } catch (err) {
+        hideLoader(); Swal.fire("เกิดข้อผิดพลาดในการโหลดแดชบอร์ด", err.message, 'error');
+      }
+    }
+
+    function populateDashFiltersInit() {
+      const pSet = new Set(); globalDashData.forEach(r => { if(r.province) pSet.add(r.province); });
+      const pSel = document.getElementById('dProv'); pSel.innerHTML = '<option value="">-- ทุกจังหวัด --</option>';
+      Array.from(pSet).sort().forEach(v => pSel.innerHTML += `<option value="${v}">${v}</option>`);
+      document.getElementById('dDist').innerHTML = '<option value="">-- ทุกอำเภอ --</option>'; document.getElementById('dGov').innerHTML = '<option value="">-- ทุก อปท. --</option>'; document.getElementById('dName').innerHTML = '<option value="">-- ดูภาพรวมทั้งหมด --</option>';
+      dashActiveFilter = null; window.updateDashFilters('init');
+    }
+
+    window.updateDashFilters = (level) => {
+      const fP = document.getElementById('dProv').value, fD = document.getElementById('dDist').value, fG = document.getElementById('dGov').value;
+      const dSet = new Set(), gSet = new Set(), nSet = new Set();
+      globalDashData.forEach(r => {
+        if(level === 'prov' || level === 'init') { if(r.province === fP || fP === "") dSet.add(r.district); }
+        if(level === 'dist' || level === 'prov' || level === 'init') { if((r.province === fP || fP === "") && (r.district === fD || fD === "")) gSet.add(r.localGov); }
+        if(level === 'gov' || level === 'dist' || level === 'prov' || level === 'init') { if((r.province === fP || fP === "") && (r.district === fD || fD === "") && (r.localGov === fG || fG === "")) nSet.add({id: r.id, name: r.elderlyName}); }
+      });
+
+      if(level === 'prov' || level === 'init') { const dSel = document.getElementById('dDist'); dSel.innerHTML = '<option value="">-- ทุกอำเภอ --</option>'; Array.from(dSet).sort().forEach(v => dSel.innerHTML += `<option value="${v}">${v}</option>`); document.getElementById('dGov').innerHTML = '<option value="">-- ทุก อปท. --</option>'; document.getElementById('dName').innerHTML = '<option value="">-- ดูภาพรวมทั้งหมด --</option>'; }
+      if(level === 'dist' || level === 'prov' || level === 'init') { const gSel = document.getElementById('dGov'); gSel.innerHTML = '<option value="">-- ทุก อปท. --</option>'; Array.from(gSet).sort().forEach(v => gSel.innerHTML += `<option value="${v}">${v}</option>`); document.getElementById('dName').innerHTML = '<option value="">-- ดูภาพรวมทั้งหมด --</option>'; }
+      if(level === 'gov' || level === 'dist' || level === 'prov' || level === 'init') { const nSel = document.getElementById('dName'); nSel.innerHTML = '<option value="">-- ดูภาพรวมทั้งหมด --</option>'; Array.from(nSet).sort((a,b)=>a.name.localeCompare(b.name)).forEach(v => nSel.innerHTML += `<option value="${v.id}">${v.name} (ID:${v.id})</option>`); }
+      window.renderDashResult();
+    }
+
+    window.clearChartFilter = () => { dashActiveFilter = null; document.getElementById('chartFilterIndicator').style.display = 'none'; window.renderDashResult(); }
+
+    window.renderDashResult = () => {
+      const fP = document.getElementById('dProv').value, fD = document.getElementById('dDist').value, fG = document.getElementById('dGov').value, selId = document.getElementById('dName').value;
+      let filtered = globalDashData.filter(d => (fP === "" || d.province === fP) && (fD === "" || d.district === fD) && (fG === "" || d.localGov === fG) && (selId === "" || d.id == selId));
+      
+      const kpiTotalProj = filtered.length; const kpiTotalGovs = new Set(filtered.map(d => d.localGov)).size; const kpiTotalBudg = filtered.reduce((s, d) => s + d.budget, 0); const kpiAvgAge = kpiTotalProj > 0 ? (filtered.reduce((s,d)=>s+d.age,0)/kpiTotalProj).toFixed(1) : 0;
+      let totalObsKpi=0, appObsKpi=0;
+      filtered.forEach(d => { if(d.observations) d.observations.forEach(o => { if(o.appropriateness==='เหมาะสม' || o.appropriateness==='ไม่เหมาะสม') totalObsKpi++; if(o.appropriateness==='เหมาะสม') appObsKpi++; }); });
+      const kpiAppRate = totalObsKpi > 0 ? ((appObsKpi/totalObsKpi)*100).toFixed(1) : 0;
+
+      document.getElementById('txtKpi1').innerText = selId ? 'รหัสอ้างอิง' : 'โครงการทั้งหมด (แห่ง)'; document.getElementById('resTotal').innerText = selId ? `#${filtered[0].id}` : kpiTotalProj; document.getElementById('resGovCount').innerText = selId ? '-' : kpiTotalGovs; document.getElementById('resBudget').innerText = kpiTotalBudg.toLocaleString(); document.getElementById('txtKpiAge').innerText = selId ? 'อายุผู้สูงอายุ (ปี)' : 'อายุเฉลี่ย (ปี)'; document.getElementById('resAge').innerText = selId ? filtered[0].age : kpiAvgAge; document.getElementById('resAppRate').innerText = `${kpiAppRate}%`;
+
+      if (dashActiveFilter) {
+          if (dashActiveFilter.type === 'approp') filtered = filtered.filter(d => d.observations && d.observations.some(o => o.appropriateness === dashActiveFilter.value));
+          else if (dashActiveFilter.type === 'category') filtered = filtered.filter(d => d.observations && d.observations.some(o => o.category === dashActiveFilter.value));
+      }
+      if(filtered.length === 0) { document.getElementById('dashResult').style.display = 'none'; document.getElementById('dashEmpty').style.display = 'block'; return; }
+
+      let appCount = { 'เหมาะสม': 0, 'ไม่เหมาะสม': 0, 'ไม่ได้ระบุ': 0 }; let condCount = { 'สภาพดี ใช้งานได้': 0, 'สภาพไม่ดี แต่ยังใช้งานได้': 0, 'สภาพไม่ดี ไม่สามารถใช้งานได้': 0 }; let catAppCount = {};
+      filtered.forEach(d => {
+          if (d.observations && d.observations.length > 0) {
+              d.observations.forEach(obs => {
+                  if (obs.appropriateness === 'เหมาะสม') appCount['เหมาะสม']++; else if (obs.appropriateness === 'ไม่เหมาะสม') appCount['ไม่เหมาะสม']++; else appCount['ไม่ได้ระบุ']++;
+                  if (condCount[obs.conditionAfter] !== undefined) condCount[obs.conditionAfter]++;
+                  let cat = obs.category;
+                  if(cat && cat !== "5. อื่นๆ") { if(!catAppCount[cat]) catAppCount[cat] = { 'เหมาะสม': 0, 'ไม่เหมาะสม': 0 }; if(obs.appropriateness === 'เหมาะสม') catAppCount[cat]['เหมาะสม']++; if(obs.appropriateness === 'ไม่เหมาะสม') catAppCount[cat]['ไม่เหมาะสม']++; }
+              });
+          }
+      });
+
+      if(dashCharts.approp) dashCharts.approp.destroy(); if(dashCharts.cond) dashCharts.cond.destroy(); if(dashCharts.catApprop) dashCharts.catApprop.destroy();
+      dashCharts.approp = new Chart(document.getElementById('chApprop'), { type: 'doughnut', data: { labels: Object.keys(appCount), datasets: [{ data: Object.values(appCount), backgroundColor: ['#10b981', '#ef4444', '#cbd5e1'] }] }, options: { plugins: { legend: { position: 'bottom' } }, onClick: (e, active) => { if(active.length>0) { dashActiveFilter = {type: 'approp', value: Object.keys(appCount)[active[0].index]}; document.getElementById('chartFilterIndicator').style.display='block'; document.getElementById('chartFilterText').innerText = `ความเหมาะสม = ${dashActiveFilter.value}`; window.renderDashResult(); } } } });
+      dashCharts.cond = new Chart(document.getElementById('chCond'), { type: 'pie', data: { labels: Object.keys(condCount), datasets: [{ data: Object.values(condCount), backgroundColor: ['#0ea5e9', '#f59e0b', '#ef4444'] }] }, options: { plugins: { legend: { position: 'bottom' } } } });
+      const cats = Object.keys(catAppCount).sort(); const dApp = cats.map(c => catAppCount[c]['เหมาะสม']); const dNotApp = cats.map(c => catAppCount[c]['ไม่เหมาะสม']);
+      dashCharts.catApprop = new Chart(document.getElementById('chCatApprop'), { type: 'bar', data: { labels: cats, datasets: [ { label: 'เหมาะสม', data: dApp, backgroundColor: '#10b981' }, { label: 'ไม่เหมาะสม', data: dNotApp, backgroundColor: '#ef4444' } ] }, options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }, onClick: (e, active) => { if(active.length>0) { dashActiveFilter = {type: 'category', value: cats[active[0].index]}; document.getElementById('chartFilterIndicator').style.display='block'; document.getElementById('chartFilterText').innerText = `หมวดหมู่ = ${dashActiveFilter.value}`; window.renderDashResult(); } } } });
+
+      const tHead = document.getElementById('resObsHead'); const tBody = document.getElementById('resObsTable'); let rHtml = '';
+      if (selId) {
+        document.getElementById('pivotControls').style.display = 'none';
+        tHead.innerHTML = `<tr><th width="15%">หมวดใหญ่</th><th width="15%">หมวดย่อย</th><th width="20%">สภาพปัจจุบัน</th><th width="15%">ความเหมาะสม</th><th width="20%">สภาพภายหลัง</th></tr>`;
+        let tHtml = '';
+        if(filtered[0].observations) { filtered[0].observations.forEach(obs => { tHtml += `<tr><td>${obs.category}</td><td>${obs.subCategory}</td><td>${obs.currentState}</td><td><span class="badge bg-${obs.appropriateness === 'เหมาะสม' ? 'success' : (obs.appropriateness === 'ไม่เหมาะสม' ? 'danger' : 'secondary')}">${obs.appropriateness}</span></td><td>${obs.conditionAfter}</td></tr>`; if(obs.remark && obs.remark !== '-') rHtml += `<div class="mb-2 pb-2 border-bottom"><b>${obs.category} - ${obs.subCategory}:</b> ${obs.remark}</div>`; }); }
+        tBody.innerHTML = tHtml; document.getElementById('remarksSection').style.display = 'block'; 
+        document.getElementById('resRemarks').innerHTML = `<h6 class="text-danger fw-bold">ความเห็นผู้ตรวจสอบ:</h6><p style="white-space: pre-wrap;">${filtered[0].inspectorSummary || 'ไม่มีความเห็นเพิ่มเติม'}</p><hr>${rHtml || '<div class="text-muted">ไม่มีการระบุรายละเอียดเพิ่มเติม</div>'}`;
+      } else {
+        document.getElementById('pivotControls').style.display = 'inline-flex'; document.getElementById('remarksSection').style.display = 'none';
+        const dim = document.getElementById('pivotDim').value;
+        if(dim === 'category') {
+            tHead.innerHTML = `<tr><th>หมวดใหญ่</th><th>หมวดย่อย</th><th>เหมาะสม (รายการ)</th><th>ไม่เหมาะสม (รายการ)</th><th>สภาพดี (รายการ)</th></tr>`;
+            let tHtml = ''; const aggC = {};
+            filtered.forEach(d => { if(d.observations) d.observations.forEach(obs => { if(!aggC[obs.category]) aggC[obs.category] = {}; if(!aggC[obs.category][obs.subCategory]) aggC[obs.category][obs.subCategory] = { app: 0, notApp: 0, good: 0 }; if(obs.appropriateness === 'เหมาะสม') aggC[obs.category][obs.subCategory].app++; if(obs.appropriateness === 'ไม่เหมาะสม') aggC[obs.category][obs.subCategory].notApp++; if(obs.conditionAfter === 'สภาพดี ใช้งานได้') aggC[obs.category][obs.subCategory].good++; }); });
+            for(let cat in aggC) { for(let sub in aggC[cat]) { tHtml += `<tr><td><b>${cat}</b></td><td>${sub}</td><td class="text-success fw-bold">${aggC[cat][sub].app}</td><td class="text-danger fw-bold">${aggC[cat][sub].notApp}</td><td class="text-primary fw-bold">${aggC[cat][sub].good}</td></tr>`; } }
+            tBody.innerHTML = tHtml; 
+        } else {
+            tHead.innerHTML = `<tr><th>พื้นที่ (Area)</th><th>ผู้สูงอายุรวม (ราย)</th><th>งบประมาณรวม</th><th>เหมาะสมล้วน (ราย)</th><th>พบจุดไม่เหมาะสม (ราย)</th></tr>`;
+            const agg = {}; let tHtml = '';
+            filtered.forEach(d => { const key = d[dim] || 'ไม่ระบุ'; if(!agg[key]) agg[key] = { count: 0, budget: 0, appUser: 0, notAppUser: 0 }; agg[key].count++; agg[key].budget += d.budget || 0; let hasNotApp = false; if(d.observations) hasNotApp = d.observations.some(o => o.appropriateness === 'ไม่เหมาะสม'); if(hasNotApp) agg[key].notAppUser++; else agg[key].appUser++; });
+            for(let k in agg) { tHtml += `<tr><td><b>${k}</b></td><td>${agg[k].count}</td><td>${agg[k].budget.toLocaleString()}</td><td class="text-success fw-bold">${agg[k].appUser}</td><td class="text-danger fw-bold">${agg[k].notAppUser}</td></tr>`; }
+            tBody.innerHTML = tHtml;
+        }
+      }
+      document.getElementById('dashEmpty').style.display = 'none'; document.getElementById('dashResult').style.display = 'block';
+    }
+
+    window.exportSingleExcel = () => {
+      const d = getFormData(); const g = d.general; const wb = XLSX.utils.book_new();
+      const ws1_data = [ ["แบบฟอร์มข้อมูลผู้สูงอายุ (DOP 5-1.1)"], [], ["ID โครงการ", g.recordId || "ยังไม่มี ID (ออฟไลน์)"], ["อปท.", `${g.localGov} อ.${g.govDistrict} จ.${g.govProvince}`], ["ผู้สังเกตการณ์", `${g.inspector1} / ผู้ร่วม: ${g.inspector2}`], ["วันที่ลงพื้นที่", `${formatDateBE(g.obsDate)} เวลา ${g.timeStart} - ${g.timeEnd}`], [], ["ข้อมูลผู้สูงอายุ"], ["ชื่อ-สกุล", g.elderlyName], ["อายุ / เพศ", `${g.age} ปี / ${g.gender}`], ["ที่อยู่", `เลขที่ ${g.houseNo} ม.${g.moo} ต.${g.subDistrict} อ.${g.district} จ.${g.province}`], ["การอาศัย / ผู้ดูแล", `${g.livingStatus} / ${g.caregiver}`], ["ลักษณะบ้าน", g.houseType], ["รายได้ / แหล่งที่มา", `${g.elderlyIncome} บาท / ${g.incomeSource}`], [], ["ผลการสังเกตการณ์สภาพที่อยู่อาศัย"], ["หมวดหมู่", "สภาพปัจจุบัน", "ความเหมาะสม", "สภาพภายหลัง", "รายละเอียดเพิ่มเติม"] ];
+      d.observations.forEach(o => { ws1_data.push([`${o.category} - ${o.subCategory}`, o.currentState, o.appropriateness, o.conditionAfter, o.remark]); });
+      const ws1 = XLSX.utils.aoa_to_sheet(ws1_data); XLSX.utils.book_append_sheet(wb, ws1, "แบบฟอร์ม");
+      let fileName = `DOP5_Record_${g.localGov || 'ไม่ระบุอปท'}_${g.elderlyName || 'ไม่ระบุชื่อ'}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    }
+    
+    window.exportPivotToExcel = () => {
+       let html = document.getElementById("pivotTableExport").outerHTML;
+       let url = 'data:application/vnd.ms-excel;charset=utf-8,%EF%BB%BF' + encodeURIComponent(html);
+       let a = document.createElement('a'); a.href = url; a.download = 'DOP5_Dashboard_Pivot.xls'; a.click();
+    }
+
+    // สร้างฟอร์มตั้งต้นตอนเปิดเว็บ
+    window.addEventListener('DOMContentLoaded', () => {
+      let html = ''; let currentCat = '';
+      stdItems.forEach(item => { if (item.cat !== currentCat) { if(currentCat !== '') html += `</div>`; html += `<div class="p-3 mb-4 rounded shadow-sm group-cat-box"><h5 class="fw-bold text-success mb-3 pb-2" style="border-bottom: 2px solid var(--success);">${item.cat}</h5>`; currentCat = item.cat; } html += createObsHtml(item); });
+      if(currentCat !== '') html += `</div>`;
+      document.getElementById('observationContainer').innerHTML = html;
+    });
+
   </script>
 </body>
 </html>
